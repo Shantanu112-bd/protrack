@@ -1,0 +1,455 @@
+{
+  "supabase": {
+    "tables": [
+      {
+        "name": "users",
+        "description": "User accounts and authentication",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "email", "type": "text", "unique": true },
+          { "name": "role", "type": "text", "enum": ["manufacturer", "packager", "transporter", "wholesaler", "retailer", "customer", "regulator", "admin"] },
+          { "name": "company_id", "type": "uuid", "references": "companies.id" },
+          { "name": "wallet_address", "type": "text" },
+          { "name": "created_at", "type": "timestamp" },
+          { "name": "updated_at", "type": "timestamp" }
+        ],
+        "indexes": ["email", "role", "company_id"]
+      },
+      {
+        "name": "companies",
+        "description": "Organizations in the supply chain",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "name", "type": "text" },
+          { "name": "type", "type": "text", "enum": ["manufacturer", "packager", "transporter", "wholesaler", "retailer"] },
+          { "name": "address", "type": "text" },
+          { "name": "contact_info", "type": "jsonb" },
+          { "name": "created_at", "type": "timestamp" },
+          { "name": "updated_at", "type": "timestamp" }
+        ],
+        "indexes": ["name", "type"]
+      },
+      {
+        "name": "products",
+        "description": "Product metadata (off-chain)",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "token_id", "type": "bigint", "unique": true },
+          { "name": "rfid_hash", "type": "text", "unique": true },
+          { "name": "product_hash", "type": "text" },
+          { "name": "name", "type": "text" },
+          { "name": "description", "type": "text" },
+          { "name": "manufacturer_id", "type": "uuid", "references": "companies.id" },
+          { "name": "batch_number", "type": "text" },
+          { "name": "manufacturing_date", "type": "timestamp" },
+          { "name": "expiry_date", "type": "timestamp" },
+          { "name": "current_owner_id", "type": "uuid", "references": "companies.id" },
+          { "name": "status", "type": "text", "enum": ["manufactured", "packaged", "shipped", "in_transit", "delivered", "sold"] },
+          { "name": "ipfs_uri", "type": "text" },
+          { "name": "created_at", "type": "timestamp" },
+          { "name": "updated_at", "type": "timestamp" }
+        ],
+        "indexes": ["token_id", "rfid_hash", "manufacturer_id", "current_owner_id", "status"]
+      },
+      {
+        "name": "product_transfers",
+        "description": "History of product ownership transfers",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "product_id", "type": "uuid", "references": "products.id" },
+          { "name": "from_company_id", "type": "uuid", "references": "companies.id" },
+          { "name": "to_company_id", "type": "uuid", "references": "companies.id" },
+          { "name": "transaction_hash", "type": "text" },
+          { "name": "status", "type": "text", "enum": ["pending", "completed", "failed"] },
+          { "name": "transfer_date", "type": "timestamp" },
+          { "name": "created_at", "type": "timestamp" },
+          { "name": "updated_at", "type": "timestamp" }
+        ],
+        "indexes": ["product_id", "from_company_id", "to_company_id", "status"]
+      },
+      {
+        "name": "iot_data",
+        "description": "IoT sensor data for products",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "product_id", "type": "uuid", "references": "products.id" },
+          { "name": "sensor_type", "type": "text", "enum": ["temperature", "humidity", "shock", "vibration", "location", "tamper"] },
+          { "name": "sensor_id", "type": "text" },
+          { "name": "value", "type": "jsonb" },
+          { "name": "timestamp", "type": "timestamp" },
+          { "name": "blockchain_verified", "type": "boolean" },
+          { "name": "transaction_hash", "type": "text" },
+          { "name": "created_at", "type": "timestamp" }
+        ],
+        "indexes": ["product_id", "sensor_type", "timestamp"]
+      },
+      {
+        "name": "gps_data",
+        "description": "GPS location data for products in transit",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "product_id", "type": "uuid", "references": "products.id" },
+          { "name": "latitude", "type": "float" },
+          { "name": "longitude", "type": "float" },
+          { "name": "altitude", "type": "float" },
+          { "name": "accuracy", "type": "float" },
+          { "name": "device_id", "type": "text" },
+          { "name": "timestamp", "type": "timestamp" },
+          { "name": "blockchain_verified", "type": "boolean" },
+          { "name": "transaction_hash", "type": "text" },
+          { "name": "created_at", "type": "timestamp" }
+        ],
+        "indexes": ["product_id", "timestamp"]
+      },
+      {
+        "name": "alerts",
+        "description": "System alerts for anomalies and events",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "product_id", "type": "uuid", "references": "products.id" },
+          { "name": "alert_type", "type": "text", "enum": ["expiry", "temperature", "delay", "tamper", "deviation", "other"] },
+          { "name": "severity", "type": "text", "enum": ["info", "warning", "critical"] },
+          { "name": "message", "type": "text" },
+          { "name": "data", "type": "jsonb" },
+          { "name": "resolved", "type": "boolean" },
+          { "name": "resolved_by", "type": "uuid", "references": "users.id" },
+          { "name": "resolved_at", "type": "timestamp" },
+          { "name": "created_at", "type": "timestamp" }
+        ],
+        "indexes": ["product_id", "alert_type", "severity", "resolved"]
+      },
+      {
+        "name": "mpc_keys",
+        "description": "MPC key management (encrypted)",
+        "columns": [
+          { "name": "id", "type": "uuid", "primary": true },
+          { "name": "key_id", "type": "text" },
+          { "name": "product_id", "type": "uuid", "references": "products.id" },
+          { "name": "owner_id", "type": "uuid", "references": "users.id" },
+          { "name": "encrypted_share", "type": "text" },
+          { "name": "public_key", "type": "text" },
+          { "name": "active", "type": "boolean" },
+          { "name": "created_at", "type": "timestamp" },
+          { "name": "expires_at", "type": "timestamp" }
+        ],
+        "indexes": ["key_id", "product_id", "owner_id"]
+      }
+    ],
+    "functions": [
+      {
+        "name": "get_product_history",
+        "description": "Get complete history of a product",
+        "parameters": ["product_id"],
+        "returns": "JSON with complete product history including transfers and IoT data"
+      },
+      {
+        "name": "verify_product_authenticity",
+        "description": "Verify product authenticity using blockchain data",
+        "parameters": ["rfid_hash"],
+        "returns": "Boolean indicating authenticity and product details"
+      },
+      {
+        "name": "generate_alert",
+        "description": "Generate system alert based on IoT data",
+        "parameters": ["product_id", "alert_type", "severity", "message", "data"],
+        "returns": "Created alert ID"
+      }
+    ],
+    "policies": [
+      {
+        "table": "products",
+        "name": "manufacturers_insert",
+        "definition": "Role-based access for manufacturers to create products"
+      },
+      {
+        "table": "products",
+        "name": "owners_update",
+        "definition": "Only current owners can update product status"
+      },
+      {
+        "table": "iot_data",
+        "name": "sensor_insert",
+        "definition": "IoT devices can insert data for products they are authorized for"
+      },
+      {
+        "table": "mpc_keys",
+        "name": "key_access",
+        "definition": "Users can only access their own key shares"
+      }
+    ]
+  },
+  "api": {
+    "endpoints": [
+      {
+        "path": "/auth",
+        "methods": {
+          "post": {
+            "description": "Authenticate user and get JWT token",
+            "parameters": {
+              "email": "string",
+              "password": "string"
+            },
+            "responses": {
+              "200": "JWT token and user info",
+              "401": "Authentication failed"
+            }
+          }
+        }
+      },
+      {
+        "path": "/products",
+        "methods": {
+          "get": {
+            "description": "Get products with filtering options",
+            "parameters": {
+              "status": "string (optional)",
+              "manufacturer_id": "uuid (optional)",
+              "owner_id": "uuid (optional)",
+              "page": "integer (optional)",
+              "limit": "integer (optional)"
+            },
+            "responses": {
+              "200": "List of products",
+              "401": "Unauthorized"
+            }
+          },
+          "post": {
+            "description": "Create new product and mint token",
+            "parameters": {
+              "name": "string",
+              "description": "string",
+              "rfid_hash": "string",
+              "batch_number": "string",
+              "manufacturing_date": "timestamp",
+              "expiry_date": "timestamp",
+              "metadata": "object"
+            },
+            "responses": {
+              "201": "Created product with token ID",
+              "400": "Invalid parameters",
+              "401": "Unauthorized"
+            }
+          }
+        }
+      },
+      {
+        "path": "/products/:id",
+        "methods": {
+          "get": {
+            "description": "Get product details",
+            "parameters": {
+              "id": "uuid (path)"
+            },
+            "responses": {
+              "200": "Product details",
+              "404": "Product not found"
+            }
+          },
+          "put": {
+            "description": "Update product status",
+            "parameters": {
+              "id": "uuid (path)",
+              "status": "string",
+              "metadata": "object (optional)"
+            },
+            "responses": {
+              "200": "Updated product",
+              "400": "Invalid parameters",
+              "401": "Unauthorized",
+              "404": "Product not found"
+            }
+          }
+        }
+      },
+      {
+        "path": "/products/:id/transfer",
+        "methods": {
+          "post": {
+            "description": "Transfer product ownership",
+            "parameters": {
+              "id": "uuid (path)",
+              "to_company_id": "uuid",
+              "signatures": "array of signatures"
+            },
+            "responses": {
+              "200": "Transfer initiated",
+              "400": "Invalid parameters",
+              "401": "Unauthorized",
+              "404": "Product not found"
+            }
+          }
+        }
+      },
+      {
+        "path": "/products/:id/history",
+        "methods": {
+          "get": {
+            "description": "Get product history",
+            "parameters": {
+              "id": "uuid (path)"
+            },
+            "responses": {
+              "200": "Product history",
+              "404": "Product not found"
+            }
+          }
+        }
+      },
+      {
+        "path": "/rfid/verify",
+        "methods": {
+          "post": {
+            "description": "Verify RFID tag and get product info",
+            "parameters": {
+              "rfid_hash": "string"
+            },
+            "responses": {
+              "200": "Product verification result",
+              "404": "RFID not found"
+            }
+          }
+        }
+      },
+      {
+        "path": "/iot/data",
+        "methods": {
+          "post": {
+            "description": "Submit IoT sensor data",
+            "parameters": {
+              "product_id": "uuid",
+              "sensor_type": "string",
+              "sensor_id": "string",
+              "value": "object",
+              "timestamp": "timestamp"
+            },
+            "responses": {
+              "201": "Data recorded",
+              "400": "Invalid parameters",
+              "401": "Unauthorized"
+            }
+          }
+        }
+      },
+      {
+        "path": "/gps/update",
+        "methods": {
+          "post": {
+            "description": "Update GPS location for product",
+            "parameters": {
+              "product_id": "uuid",
+              "latitude": "float",
+              "longitude": "float",
+              "altitude": "float (optional)",
+              "accuracy": "float (optional)",
+              "device_id": "string",
+              "timestamp": "timestamp"
+            },
+            "responses": {
+              "200": "Location updated",
+              "400": "Invalid parameters",
+              "401": "Unauthorized",
+              "404": "Product not found"
+            }
+          }
+        }
+      },
+      {
+        "path": "/mpc/keys",
+        "methods": {
+          "post": {
+            "description": "Create or update MPC key share",
+            "parameters": {
+              "key_id": "string",
+              "product_id": "uuid",
+              "encrypted_share": "string",
+              "public_key": "string",
+              "expires_at": "timestamp (optional)"
+            },
+            "responses": {
+              "201": "Key share created",
+              "400": "Invalid parameters",
+              "401": "Unauthorized"
+            }
+          },
+          "get": {
+            "description": "Get MPC key shares for user",
+            "parameters": {
+              "product_id": "uuid (optional)"
+            },
+            "responses": {
+              "200": "List of key shares",
+              "401": "Unauthorized"
+            }
+          }
+        }
+      },
+      {
+        "path": "/alerts",
+        "methods": {
+          "get": {
+            "description": "Get alerts with filtering",
+            "parameters": {
+              "product_id": "uuid (optional)",
+              "alert_type": "string (optional)",
+              "severity": "string (optional)",
+              "resolved": "boolean (optional)",
+              "page": "integer (optional)",
+              "limit": "integer (optional)"
+            },
+            "responses": {
+              "200": "List of alerts",
+              "401": "Unauthorized"
+            }
+          },
+          "post": {
+            "description": "Create new alert",
+            "parameters": {
+              "product_id": "uuid",
+              "alert_type": "string",
+              "severity": "string",
+              "message": "string",
+              "data": "object (optional)"
+            },
+            "responses": {
+              "201": "Alert created",
+              "400": "Invalid parameters",
+              "401": "Unauthorized"
+            }
+          }
+        }
+      },
+      {
+        "path": "/alerts/:id/resolve",
+        "methods": {
+          "put": {
+            "description": "Resolve an alert",
+            "parameters": {
+              "id": "uuid (path)"
+            },
+            "responses": {
+              "200": "Alert resolved",
+              "401": "Unauthorized",
+              "404": "Alert not found"
+            }
+          }
+        }
+      },
+      {
+        "path": "/analytics/dashboard",
+        "methods": {
+          "get": {
+            "description": "Get analytics dashboard data",
+            "parameters": {
+              "company_id": "uuid (optional)",
+              "date_range": "string (optional)"
+            },
+            "responses": {
+              "200": "Dashboard data",
+              "401": "Unauthorized"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

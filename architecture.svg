@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <style>
+    .title { font: bold 24px sans-serif; fill: #333; }
+    .subtitle { font: bold 18px sans-serif; fill: #555; }
+    .label { font: 14px sans-serif; fill: #333; }
+    .small-label { font: 12px sans-serif; fill: #555; }
+    .box { stroke: #2563eb; stroke-width: 2; fill: #dbeafe; rx: 5; ry: 5; }
+    .frontend-box { stroke: #0891b2; stroke-width: 2; fill: #cffafe; rx: 5; ry: 5; }
+    .backend-box { stroke: #4f46e5; stroke-width: 2; fill: #e0e7ff; rx: 5; ry: 5; }
+    .blockchain-box { stroke: #7c3aed; stroke-width: 2; fill: #ede9fe; rx: 5; ry: 5; }
+    .iot-box { stroke: #15803d; stroke-width: 2; fill: #dcfce7; rx: 5; ry: 5; }
+    .security-box { stroke: #b91c1c; stroke-width: 2; fill: #fee2e2; rx: 5; ry: 5; }
+    .arrow { stroke: #666; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .dashed-arrow { stroke: #666; stroke-width: 2; fill: none; marker-end: url(#arrowhead); stroke-dasharray: 5,5; }
+    .connector { stroke: #666; stroke-width: 2; fill: none; }
+  </style>
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="40" class="title" text-anchor="middle">ProTrack System Architecture</text>
+  
+  <!-- Frontend Layer -->
+  <rect x="50" y="100" width="1100" height="150" class="frontend-box" />
+  <text x="100" y="130" class="subtitle">Frontend (React + TypeScript)</text>
+  
+  <rect x="100" y="150" width="150" height="80" class="box" />
+  <text x="175" y="180" class="label" text-anchor="middle">Role-based</text>
+  <text x="175" y="200" class="label" text-anchor="middle">Dashboards</text>
+  
+  <rect x="280" y="150" width="150" height="80" class="box" />
+  <text x="355" y="180" class="label" text-anchor="middle">Product</text>
+  <text x="355" y="200" class="label" text-anchor="middle">Management</text>
+  
+  <rect x="460" y="150" width="150" height="80" class="box" />
+  <text x="535" y="180" class="label" text-anchor="middle">RFID/QR</text>
+  <text x="535" y="200" class="label" text-anchor="middle">Scanner</text>
+  
+  <rect x="640" y="150" width="150" height="80" class="box" />
+  <text x="715" y="180" class="label" text-anchor="middle">GPS + IoT</text>
+  <text x="715" y="200" class="label" text-anchor="middle">Visualization</text>
+  
+  <rect x="820" y="150" width="150" height="80" class="box" />
+  <text x="895" y="180" class="label" text-anchor="middle">Wallet</text>
+  <text x="895" y="200" class="label" text-anchor="middle">Integration</text>
+  
+  <rect x="1000" y="150" width="120" height="80" class="box" />
+  <text x="1060" y="180" class="label" text-anchor="middle">UI/UX</text>
+  <text x="1060" y="200" class="small-label" text-anchor="middle">(TailwindCSS, shadcn)</text>
+  
+  <!-- Backend Layer -->
+  <rect x="50" y="300" width="1100" height="150" class="backend-box" />
+  <text x="100" y="330" class="subtitle">Backend (Node.js + Supabase)</text>
+  
+  <rect x="100" y="350" width="180" height="80" class="box" />
+  <text x="190" y="380" class="label" text-anchor="middle">Supabase</text>
+  <text x="190" y="400" class="small-label" text-anchor="middle">(Auth, PostgreSQL, Realtime)</text>
+  
+  <rect x="310" y="350" width="180" height="80" class="box" />
+  <text x="400" y="380" class="label" text-anchor="middle">API Layer</text>
+  <text x="400" y="400" class="small-label" text-anchor="middle">(Express/Nest.js)</text>
+  
+  <rect x="520" y="350" width="180" height="80" class="box" />
+  <text x="610" y="380" class="label" text-anchor="middle">IoT Data</text>
+  <text x="610" y="400" class="small-label" text-anchor="middle">(Sensor Logs, Events)</text>
+  
+  <rect x="730" y="350" width="180" height="80" class="box" />
+  <text x="820" y="380" class="label" text-anchor="middle">IPFS/Filecoin</text>
+  <text x="820" y="400" class="small-label" text-anchor="middle">(Product Certificates)</text>
+  
+  <rect x="940" y="350" width="180" height="80" class="box" />
+  <text x="1030" y="380" class="label" text-anchor="middle">AI/Analytics</text>
+  <text x="1030" y="400" class="small-label" text-anchor="middle">(Predictive, Anomaly Detection)</text>
+  
+  <!-- Blockchain Layer -->
+  <rect x="50" y="500" width="1100" height="150" class="blockchain-box" />
+  <text x="100" y="530" class="subtitle">Blockchain Layer (Solidity)</text>
+  
+  <rect x="100" y="550" width="200" height="80" class="box" />
+  <text x="200" y="580" class="label" text-anchor="middle">Product Tokenization</text>
+  <text x="200" y="600" class="small-label" text-anchor="middle">(NFT/SBT for RFID)</text>
+  
+  <rect x="330" y="550" width="200" height="80" class="box" />
+  <text x="430" y="580" class="label" text-anchor="middle">Token Lifecycle</text>
+  <text x="430" y="600" class="small-label" text-anchor="middle">(Manufacture → Sell)</text>
+  
+  <rect x="560" y="550" width="200" height="80" class="box" />
+  <text x="660" y="580" class="label" text-anchor="middle">Access Control</text>
+  <text x="660" y="600" class="small-label" text-anchor="middle">(Private Key Encryption)</text>
+  
+  <rect x="790" y="550" width="200" height="80" class="box" />
+  <text x="890" y="580" class="label" text-anchor="middle">Chainlink Oracles</text>
+  <text x="890" y="600" class="small-label" text-anchor="middle">(IoT/GPS Validation)</text>
+  
+  <rect x="1020" y="550" width="100" height="80" class="box" />
+  <text x="1070" y="580" class="label" text-anchor="middle">MPC</text>
+  <text x="1070" y="600" class="small-label" text-anchor="middle">Multisig</text>
+  
+  <!-- IoT Layer -->
+  <rect x="50" y="700" width="540" height="150" class="iot-box" />
+  <text x="100" y="730" class="subtitle">IoT Layer</text>
+  
+  <rect x="100" y="750" width="120" height="80" class="box" />
+  <text x="160" y="780" class="label" text-anchor="middle">RFID Tags</text>
+  <text x="160" y="800" class="small-label" text-anchor="middle">+ Barcodes</text>
+  
+  <rect x="250" y="750" width="120" height="80" class="box" />
+  <text x="310" y="780" class="label" text-anchor="middle">GPS</text>
+  <text x="310" y="800" class="small-label" text-anchor="middle">Tracking</text>
+  
+  <rect x="400" y="750" width="160" height="80" class="box" />
+  <text x="480" y="780" class="label" text-anchor="middle">Sensors</text>
+  <text x="480" y="800" class="small-label" text-anchor="middle">(Temp, Humidity, etc.)</text>
+  
+  <!-- Security Layer -->
+  <rect x="610" y="700" width="540" height="150" class="security-box" />
+  <text x="660" y="730" class="subtitle">Security Layer</text>
+  
+  <rect x="660" y="750" width="120" height="80" class="box" />
+  <text x="720" y="780" class="label" text-anchor="middle">MPC Key</text>
+  <text x="720" y="800" class="small-label" text-anchor="middle">Management</text>
+  
+  <rect x="810" y="750" width="150" height="80" class="box" />
+  <text x="885" y="780" class="label" text-anchor="middle">Private Key</text>
+  <text x="885" y="800" class="small-label" text-anchor="middle">Sharing Logic</text>
+  
+  <rect x="990" y="750" width="120" height="80" class="box" />
+  <text x="1050" y="780" class="label" text-anchor="middle">ZKP</text>
+  <text x="1050" y="800" class="small-label" text-anchor="middle">(Optional)</text>
+  
+  <!-- Connections -->
+  <!-- Frontend to Backend -->
+  <path d="M 175 230 L 175 350" class="arrow" />
+  <path d="M 355 230 L 355 350" class="arrow" />
+  <path d="M 535 230 L 535 350" class="arrow" />
+  <path d="M 715 230 L 715 350" class="arrow" />
+  <path d="M 895 230 L 895 550" class="dashed-arrow" />
+  
+  <!-- Backend to Blockchain -->
+  <path d="M 190 430 L 190 550" class="arrow" />
+  <path d="M 400 430 L 400 550" class="arrow" />
+  <path d="M 610 430 L 610 550" class="arrow" />
+  <path d="M 820 430 L 820 550" class="arrow" />
+  
+  <!-- Blockchain to IoT/Security -->
+  <path d="M 200 630 L 200 750" class="arrow" />
+  <path d="M 430 630 L 310 750" class="arrow" />
+  <path d="M 660 630 L 660 750" class="dashed-arrow" />
+  <path d="M 890 630 L 890 750" class="dashed-arrow" />
+  <path d="M 1070 630 L 1050 750" class="dashed-arrow" />
+  
+  <!-- IoT to Backend -->
+  <path d="M 160 750 C 100 650 50 450 100 400" class="dashed-arrow" />
+  <path d="M 310 750 C 250 650 200 450 520 400" class="dashed-arrow" />
+  <path d="M 480 750 C 420 650 370 450 610 430" class="dashed-arrow" />
+</svg>

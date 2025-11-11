@@ -1,0 +1,44 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Frontend",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/protrack-frontend",
+      "preLaunchTask": "Start Frontend"
+    },
+    {
+      "name": "Launch Backend",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/protrack-frontend/backend/src/server.ts",
+      "cwd": "${workspaceFolder}/protrack-frontend/backend",
+      "preLaunchTask": "Start Backend",
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3001"
+      },
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/protrack-frontend/backend/dist/**/*.js"]
+    },
+    {
+      "name": "Launch Both Servers",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/protrack-frontend/node_modules/.bin/concurrently",
+      "args": ["\"npm run dev\"", "\"cd backend && npm run dev\""],
+      "cwd": "${workspaceFolder}/protrack-frontend",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Full Stack",
+      "configurations": ["Launch Frontend", "Launch Backend"],
+      "stopAll": true
+    }
+  ]
+}

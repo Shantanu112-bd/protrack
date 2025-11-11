@@ -1,0 +1,24 @@
+{
+  "network": "localhost",
+  "chainId": 1337,
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "timestamp": "2025-10-13T09:45:54.126Z",
+  "contracts": {
+    "ProTrackNFT": {
+      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+      "txHash": "0xbf3815c04a8db96bc7ca779aa14a0b0ce9ae584be37900276fe6b371f52c6318"
+    },
+    "SupplyChainEscrow": {
+      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      "txHash": "0xbfe50a705f461065f7c40bf2a121ea03d985f7b29572909a44cb21565e122264"
+    },
+    "IoTOracle": {
+      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+      "txHash": "0xd826816bd0d0c36515cd127d2e92fa0e564fc46676bc23a7fa322ac651d8d373"
+    },
+    "SupplyChainGovernance": {
+      "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+      "txHash": "0x5bd94cbde32dafe66b9e5103715108c6339b88aaecf4c3c96b777a6863f974d2"
+    }
+  }
+}

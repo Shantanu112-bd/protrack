@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1000" viewBox="0 0 1200 1000">
+  <style>
+    .title { font: bold 24px sans-serif; fill: #333; }
+    .subtitle { font: bold 18px sans-serif; fill: #555; }
+    .label { font: 14px sans-serif; fill: #333; }
+    .small-label { font: 12px sans-serif; fill: #555; }
+    .layer-title { font: bold 16px sans-serif; fill: #fff; }
+    .connection { stroke: #666; stroke-width: 2; stroke-dasharray: 5,5; }
+    .solid-connection { stroke: #333; stroke-width: 2; }
+    .highlight-connection { stroke: #0066cc; stroke-width: 2.5; }
+    .new-feature { stroke: #009900; stroke-width: 3; }
+    .box { fill: #f0f0f0; stroke: #999; stroke-width: 2; rx: 10; ry: 10; }
+    .layer { fill: #444; stroke: #222; stroke-width: 2; rx: 5; ry: 5; }
+    .user-layer { fill: #4a6da7; }
+    .application-layer { fill: #5d8aa8; }
+    .blockchain-layer { fill: #6b8e23; }
+    .data-layer { fill: #9370db; }
+    .infrastructure-layer { fill: #cd853f; }
+    .new-module { fill: #e6ffe6; stroke: #009900; stroke-width: 2; rx: 10; ry: 10; }
+    .aa-color { fill: #ffeecc; stroke: #ff9900; }
+    .did-color { fill: #e6f2ff; stroke: #0066cc; }
+    .depin-color { fill: #f0e6ff; stroke: #6600cc; }
+  </style>
+
+  <!-- Title -->
+  <text x="600" y="40" text-anchor="middle" class="title">ProTrack 2.0 System Architecture</text>
+  <text x="600" y="70" text-anchor="middle" class="subtitle">Integrating Account Abstraction, DIDs, and DePIN</text>
+
+  <!-- Layers -->
+  <rect x="50" y="100" width="1100" height="120" class="layer user-layer" />
+  <text x="100" y="130" class="layer-title">User Layer</text>
+
+  <rect x="50" y="240" width="1100" height="180" class="layer application-layer" />
+  <text x="100" y="270" class="layer-title">Application Layer</text>
+
+  <rect x="50" y="440" width="1100" height="220" class="layer blockchain-layer" />
+  <text x="100" y="470" class="layer-title">Blockchain Layer</text>
+
+  <rect x="50" y="680" width="1100" height="140" class="layer data-layer" />
+  <text x="100" y="710" class="layer-title">Data Layer</text>
+
+  <rect x="50" y="840" width="1100" height="120" class="layer infrastructure-layer" />
+  <text x="100" y="870" class="layer-title">Infrastructure Layer</text>
+
+  <!-- User Layer Components -->
+  <rect x="150" y="130" width="180" height="70" class="box" />
+  <text x="240" y="170" text-anchor="middle" class="label">Web Application</text>
+
+  <rect x="400" y="130" width="180" height="70" class="box" />
+  <text x="490" y="170" text-anchor="middle" class="label">Mobile Application</text>
+
+  <rect x="650" y="130" width="180" height="70" class="new-module aa-color" />
+  <text x="740" y="160" text-anchor="middle" class="label">Smart Account UI</text>
+  <text x="740" y="180" text-anchor="middle" class="small-label">(Safe/Biconomy)</text>
+
+  <rect x="900" y="130" width="180" height="70" class="new-module did-color" />
+  <text x="990" y="160" text-anchor="middle" class="label">DID Management</text>
+  <text x="990" y="180" text-anchor="middle" class="small-label">(Credentials Dashboard)</text>
+
+  <!-- Application Layer Components -->
+  <rect x="100" y="280" width="150" height="60" class="box" />
+  <text x="175" y="315" text-anchor="middle" class="label">Authentication</text>
+
+  <rect x="270" y="280" width="150" height="60" class="new-module aa-color" />
+  <text x="345" y="315" text-anchor="middle" class="label">Session Key Manager</text>
+
+  <rect x="440" y="280" width="150" height="60" class="new-module did-color" />
+  <text x="515" y="315" text-anchor="middle" class="label">VC Verifier</text>
+
+  <rect x="610" y="280" width="150" height="60" class="box" />
+  <text x="685" y="315" text-anchor="middle" class="label">Product Tracking</text>
+
+  <rect x="780" y="280" width="150" height="60" class="new-module depin-color" />
+  <text x="855" y="315" text-anchor="middle" class="label">DePIN Data Aggregator</text>
+
+  <rect x="950" y="280" width="150" height="60" class="box" />
+  <text x="1025" y="315" text-anchor="middle" class="label">Analytics</text>
+
+  <rect x="100" y="350" width="150" height="60" class="new-module aa-color" />
+  <text x="175" y="385" text-anchor="middle" class="label">Intent Manager</text>
+
+  <rect x="270" y="350" width="150" height="60" class="new-module did-color" />
+  <text x="345" y="385" text-anchor="middle" class="label">DID Resolver</text>
+
+  <rect x="440" y="350" width="150" height="60" class="box" />
+  <text x="515" y="385" text-anchor="middle" class="label">Supply Chain API</text>
+
+  <rect x="610" y="350" width="150" height="60" class="new-module aa-color" />
+  <text x="685" y="385" text-anchor="middle" class="label">Gas Sponsorship</text>
+
+  <rect x="780" y="350" width="150" height="60" class="new-module depin-color" />
+  <text x="855" y="385" text-anchor="middle" class="label">ZK-Proof Generator</text>
+
+  <rect x="950" y="350" width="150" height="60" class="box" />
+  <text x="1025" y="385" text-anchor="middle" class="label">Notification Service</text>
+
+  <!-- Blockchain Layer Components -->
+  <rect x="100" y="480" width="150" height="60" class="box" />
+  <text x="175" y="515" text-anchor="middle" class="label">ProTrackNFT</text>
+
+  <rect x="270" y="480" width="150" height="60" class="box" />
+  <text x="345" y="515" text-anchor="middle" class="label">SupplyChainEscrow</text>
+
+  <rect x="440" y="480" width="150" height="60" class="new-module depin-color" />
+  <text x="515" y="515" text-anchor="middle" class="label">DePIN Oracle</text>
+
+  <rect x="610" y="480" width="150" height="60" class="new-module did-color" />
+  <text x="685" y="515" text-anchor="middle" class="label">VC Registry</text>
+
+  <rect x="780" y="480" width="150" height="60" class="new-module aa-color" />
+  <text x="855" y="515" text-anchor="middle" class="label">AA Bundler</text>
+
+  <rect x="950" y="480" width="150" height="60" class="box" />
+  <text x="1025" y="515" text-anchor="middle" class="label">Governance</text>
+
+  <rect x="100" y="550" width="150" height="60" class="new-module aa-color" />
+  <text x="175" y="585" text-anchor="middle" class="label">Paymaster</text>
+
+  <rect x="270" y="550" width="150" height="60" class="new-module did-color" />
+  <text x="345" y="585" text-anchor="middle" class="label">Credential Verifier</text>
+
+  <rect x="440" y="550" width="150" height="60" class="new-module depin-color" />
+  <text x="515" y="585" text-anchor="middle" class="label">IoT Consensus</text>
+
+  <rect x="610" y="550" width="150" height="60" class="new-module aa-color" />
+  <text x="685" y="585" text-anchor="middle" class="label">MPC + AA Wallet</text>
+
+  <rect x="780" y="550" width="150" height="60" class="new-module depin-color" />
+  <text x="855" y="585" text-anchor="middle" class="label">ZK Verifier</text>
+
+  <rect x="950" y="550" width="150" height="60" class="box" />
+  <text x="1025" y="585" text-anchor="middle" class="label">Chainlink Integration</text>
+
+  <!-- Data Layer Components -->
+  <rect x="100" y="720" width="150" height="60" class="box" />
+  <text x="175" y="755" text-anchor="middle" class="label">Supabase DB</text>
+
+  <rect x="270" y="720" width="150" height="60" class="new-module did-color" />
+  <text x="345" y="755" text-anchor="middle" class="label">DID References</text>
+
+  <rect x="440" y="720" width="150" height="60" class="new-module did-color" />
+  <text x="345" y="755" text-anchor="middle" class="label">VC Storage</text>
+
+  <rect x="610" y="720" width="150" height="60" class="new-module depin-color" />
+  <text x="685" y="755" text-anchor="middle" class="label">IoT Data Nodes</text>
+
+  <rect x="780" y="720" width="150" height="60" class="box" />
+  <text x="855" y="755" text-anchor="middle" class="label">IPFS Storage</text>
+
+  <rect x="950" y="720" width="150" height="60" class="new-module aa-color" />
+  <text x="1025" y="755" text-anchor="middle" class="label">Session Key Storage</text>
+
+  <!-- Infrastructure Layer Components -->
+  <rect x="100" y="880" width="150" height="60" class="box" />
+  <text x="175" y="915" text-anchor="middle" class="label">Polygon/Arbitrum</text>
+
+  <rect x="270" y="880" width="150" height="60" class="new-module aa-color" />
+  <text x="345" y="915" text-anchor="middle" class="label">ERC-4337 Infra</text>
+
+  <rect x="440" y="880" width="150" height="60" class="new-module did-color" />
+  <text x="515" y="915" text-anchor="middle" class="label">DID Infrastructure</text>
+
+  <rect x="610" y="880" width="150" height="60" class="new-module depin-color" />
+  <text x="685" y="915" text-anchor="middle" class="label">DePIN Network</text>
+
+  <rect x="780" y="880" width="150" height="60" class="box" />
+  <text x="855" y="915" text-anchor="middle" class="label">Chainlink Nodes</text>
+
+  <rect x="950" y="880" width="150" height="60" class="box" />
+  <text x="1025" y="915" text-anchor="middle" class="label">Cloud Infrastructure</text>
+
+  <!-- Key Connections -->
+  <!-- Account Abstraction Flow -->
+  <path d="M740 200 L740 280 L345 280" class="new-feature" />
+  <path d="M345 340 L345 385 L175 385" class="new-feature" />
+  <path d="M175 410 L175 480 L855 480" class="new-feature" />
+  <path d="M855 540 L685 550" class="new-feature" />
+  <path d="M685 610 L345 880" class="new-feature" />
+
+  <!-- DID & VC Flow -->
+  <path d="M990 200 L990 280 L515 280" class="highlight-connection" />
+  <path d="M515 340 L345 350" class="highlight-connection" />
+  <path d="M345 410 L345 550" class="highlight-connection" />
+  <path d="M345 610 L345 720" class="highlight-connection" />
+  <path d="M345 780 L515 880" class="highlight-connection" />
+
+  <!-- DePIN Flow -->
+  <path d="M855 340 L855 385" class="connection" />
+  <path d="M855 410 L515 480" class="connection" />
+  <path d="M515 540 L515 585" class="connection" />
+  <path d="M515 610 L685 720" class="connection" />
+  <path d="M685 780 L685 880" class="connection" />
+
+  <!-- Standard Connections -->
+  <path d="M240 200 L240 280" class="solid-connection" />
+  <path d="M490 200 L490 280" class="solid-connection" />
+  <path d="M175 340 L175 350" class="solid-connection" />
+  <path d="M515 340 L515 350" class="solid-connection" />
+  <path d="M685 340 L685 350" class="solid-connection" />
+  <path d="M855 340 L855 350" class="solid-connection" />
+  <path d="M1025 340 L1025 350" class="solid-connection" />
+  <path d="M175 610 L175 720" class="solid-connection" />
+  <path d="M855 610 L855 720" class="solid-connection" />
+  <path d="M1025 610 L1025 720" class="solid-connection" />
+  <path d="M175 780 L175 880" class="solid-connection" />
+  <path d="M855 780 L855 880" class="solid-connection" />
+  <path d="M1025 780 L1025 880" class="solid-connection" />
+
+  <!-- Legend -->
+  <rect x="50" y="970" width="20" height="20" class="box" />
+  <text x="80" y="985" class="small-label">Existing Component</text>
+  
+  <rect x="200" y="970" width="20" height="20" class="new-module aa-color" />
+  <text x="230" y="985" class="small-label">Account Abstraction</text>
+  
+  <rect x="380" y="970" width="20" height="20" class="new-module did-color" />
+  <text x="410" y="985" class="small-label">DID & Verifiable Credentials</text>
+  
+  <rect x="600" y="970" width="20" height="20" class="new-module depin-color" />
+  <text x="630" y="985" class="small-label">DePIN Integration</text>
+  
+  <line x1="750" y1="980" x2="800" y2="980" class="solid-connection" />
+  <text x="830" y="985" class="small-label">Standard Connection</text>
+  
+  <line x1="950" y1="980" x2="1000" y2="980" class="new-feature" />
+  <text x="1030" y="985" class="small-label">New Feature Flow</text>
+</svg>
