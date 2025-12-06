@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useWeb3 } from "../hooks/useWeb3";
+import { useWeb3 } from "../contexts/web3ContextTypes";
 import WalletConnection from "./WalletConnection";
 
 type UserType =
@@ -14,64 +14,73 @@ const SignInPage: React.FC = () => {
   const navigate = useNavigate();
   const { isActive, account } = useWeb3();
   const [userType, setUserType] = useState<UserType>("consumer");
+  const [isEntering, setIsEntering] = useState(false);
 
   const userTypeOptions: {
     id: UserType;
     label: string;
     icon: string;
     color: string;
+    description: string;
   }[] = [
     {
       id: "manufacturer",
       label: "Manufacturer",
       icon: "🏭",
       color: "from-blue-500 to-cyan-500",
+      description: "Create and mint new products",
     },
     {
       id: "transporter",
       label: "Transporter",
       icon: "🚚",
       color: "from-green-500 to-emerald-500",
+      description: "Manage product shipments",
     },
     {
       id: "retailer",
       label: "Retailer",
       icon: "🏪",
       color: "from-purple-500 to-fuchsia-500",
+      description: "Receive and sell products",
     },
     {
       id: "consumer",
       label: "Consumer",
       icon: "👤",
       color: "from-orange-500 to-amber-500",
+      description: "Verify product authenticity",
     },
     {
       id: "admin",
       label: "Administrator",
       icon: "👑",
       color: "from-red-500 to-pink-500",
+      description: "Manage system settings",
     },
   ];
 
   const handleSignIn = () => {
-    // In a real app, this would authenticate with a backend
-    // For now, we'll just redirect to the main dashboard
-    navigate("/dashboard");
+    setIsEntering(true);
+    // Simulate a smooth transition
+    setTimeout(() => {
+      navigate("/dashboard");
+    }, 800);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHBhdHRlcm5UcmFuc2Zvcm09InJvdGF0ZSg0NSkiPjxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjAuNSIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjcGF0dGVybikiLz48L3N2Zz4=')] opacity-20"></div>
 
-      <div className="relative z-10 max-w-4xl w-full bg-gray-800/30 backdrop-blur-xl rounded-3xl border border-gray-700/50 shadow-2xl overflow-hidden">
+      <div className="relative z-10 max-w-6xl w-full bg-gray-800/30 backdrop-blur-xl rounded-3xl border border-gray-700/50 shadow-2xl overflow-hidden">
         <div className="flex flex-col lg:flex-row">
           {/* Left Panel - Branding */}
-          <div className="lg:w-1/2 bg-gradient-to-br from-purple-600/20 to-blue-600/20 p-8 lg:p-12 flex flex-col justify-center">
+          <div className="lg:w-2/5 bg-gradient-to-br from-purple-600/20 to-blue-600/20 p-8 lg:p-12 flex flex-col justify-center">
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl mb-6 shadow-lg">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 w-8 text-white"
+                  className="h-10 w-10 text-white"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -84,11 +93,13 @@ const SignInPage: React.FC = () => {
                   />
                 </svg>
               </div>
-              <h1 className="text-4xl font-bold text-white mb-4">ProTrack</h1>
-              <p className="text-xl text-gray-300 mb-6">
+              <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                ProTrack
+              </h1>
+              <p className="text-2xl text-gray-300 mb-6">
                 Supply Chain Transparency
               </p>
-              <p className="text-gray-400 mb-8">
+              <p className="text-gray-400 mb-8 text-lg">
                 Connect your wallet to access the decentralized supply chain
                 tracking platform. Verify product authenticity, track shipments,
                 and ensure transparency at every step.
@@ -113,32 +124,39 @@ const SignInPage: React.FC = () => {
           </div>
 
           {/* Right Panel - Sign In Form */}
-          <div className="lg:w-1/2 p-8 lg:p-12 bg-gray-900/50">
+          <div className="lg:w-3/5 p-8 lg:p-12 bg-gray-900/50">
             <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-white mb-2">
+              <h2 className="text-4xl font-bold text-white mb-2">
                 Welcome Back
               </h2>
-              <p className="text-gray-400">Sign in to your ProTrack account</p>
+              <p className="text-gray-400 text-lg">
+                Sign in to your ProTrack account
+              </p>
             </div>
 
             {/* User Type Selection */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-white mb-4">
+              <h3 className="text-xl font-semibold text-white mb-4">
                 Select Your Role
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {userTypeOptions.map((option) => (
                   <button
                     key={option.id}
                     onClick={() => setUserType(option.id)}
-                    className={`p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                    className={`p-5 rounded-2xl border-2 transition-all duration-300 transform hover:scale-105 group ${
                       userType === option.id
-                        ? `bg-gradient-to-r ${option.color} border-transparent text-white shadow-lg`
+                        ? `bg-gradient-to-r ${option.color} border-transparent text-white shadow-xl`
                         : "bg-gray-800/50 border-gray-700 text-gray-300 hover:border-gray-600"
                     }`}
                   >
-                    <div className="text-2xl mb-2">{option.icon}</div>
-                    <div className="font-medium">{option.label}</div>
+                    <div className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">
+                      {option.icon}
+                    </div>
+                    <div className="font-bold text-lg mb-1">{option.label}</div>
+                    <div className="text-sm opacity-80">
+                      {option.description}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -146,16 +164,16 @@ const SignInPage: React.FC = () => {
 
             {/* Wallet Connection */}
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-white mb-4">
+              <h3 className="text-xl font-semibold text-white mb-4">
                 Connect Your Wallet
               </h3>
-              <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+              <div className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700 shadow-lg">
                 {isActive ? (
                   <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500/20 rounded-full mb-4">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500/20 rounded-full mb-6">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-8 w-8 text-green-500"
+                        className="h-10 w-10 text-green-500"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -168,25 +186,33 @@ const SignInPage: React.FC = () => {
                         />
                       </svg>
                     </div>
-                    <p className="text-green-400 font-medium mb-2">
+                    <p className="text-green-400 font-bold text-xl mb-2">
                       Wallet Connected
                     </p>
-                    <p className="text-gray-400 text-sm mb-4">
+                    <p className="text-gray-400 text-sm mb-6">
                       {account?.slice(0, 6)}...{account?.slice(-4)}
                     </p>
                     <button
                       onClick={handleSignIn}
-                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02]"
+                      disabled={isEntering}
+                      className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-lg text-lg flex items-center justify-center"
                     >
-                      Enter Dashboard
+                      {isEntering ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                          Entering Dashboard...
+                        </>
+                      ) : (
+                        "Enter Dashboard"
+                      )}
                     </button>
                   </div>
                 ) : (
                   <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-500/20 rounded-full mb-6">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-8 w-8 text-blue-500"
+                        className="h-10 w-10 text-blue-500"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -199,7 +225,7 @@ const SignInPage: React.FC = () => {
                         />
                       </svg>
                     </div>
-                    <p className="text-gray-400 mb-6">
+                    <p className="text-gray-400 mb-6 text-lg">
                       Connect your wallet to continue
                     </p>
                     <WalletConnection />
@@ -209,12 +235,12 @@ const SignInPage: React.FC = () => {
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-gray-800/30 p-3 rounded-lg">
-                <div className="text-blue-400 mb-1">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="bg-gray-800/30 p-5 rounded-xl hover:bg-gray-800/50 transition-all duration-300">
+                <div className="text-blue-400 mb-3">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mx-auto"
+                    className="h-8 w-8 mx-auto"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -227,13 +253,16 @@ const SignInPage: React.FC = () => {
                     />
                   </svg>
                 </div>
-                <p className="text-xs text-gray-400">Secure</p>
+                <p className="font-bold text-white mb-1">Secure</p>
+                <p className="text-sm text-gray-400">
+                  Blockchain verified records
+                </p>
               </div>
-              <div className="bg-gray-800/30 p-3 rounded-lg">
-                <div className="text-green-400 mb-1">
+              <div className="bg-gray-800/30 p-5 rounded-xl hover:bg-gray-800/50 transition-all duration-300">
+                <div className="text-green-400 mb-3">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mx-auto"
+                    className="h-8 w-8 mx-auto"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -246,13 +275,16 @@ const SignInPage: React.FC = () => {
                     />
                   </svg>
                 </div>
-                <p className="text-xs text-gray-400">Fast</p>
+                <p className="font-bold text-white mb-1">Fast</p>
+                <p className="text-sm text-gray-400">
+                  Real-time tracking updates
+                </p>
               </div>
-              <div className="bg-gray-800/30 p-3 rounded-lg">
-                <div className="text-purple-400 mb-1">
+              <div className="bg-gray-800/30 p-5 rounded-xl hover:bg-gray-800/50 transition-all duration-300">
+                <div className="text-purple-400 mb-3">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 mx-auto"
+                    className="h-8 w-8 mx-auto"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -265,7 +297,8 @@ const SignInPage: React.FC = () => {
                     />
                   </svg>
                 </div>
-                <p className="text-xs text-gray-400">Insights</p>
+                <p className="font-bold text-white mb-1">Insights</p>
+                <p className="text-sm text-gray-400">Data-driven analytics</p>
               </div>
             </div>
           </div>

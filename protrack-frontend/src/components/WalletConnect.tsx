@@ -1,209 +1,185 @@
-import React, { useState } from 'react'
-import { useWallet, formatAddress, getNetworkName } from '../contexts/WalletContext'
+import React, { useState } from "react";
+import { useWeb3 } from "../contexts/web3ContextTypes";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import {
+  Wallet,
+  AlertTriangle,
+  CheckCircle,
+  Network,
+  Copy,
+} from "lucide-react";
+import { getSupportedNetwork } from "../contracts/contractConfig";
 
-const WalletConnect: React.FC<{ isDark?: boolean }> = ({ isDark = true }) => {
+const WalletConnect = () => {
   const {
-    isConnected,
-    address,
-    balance,
+    account,
+    isActive,
     chainId,
-    isLoading,
-    error,
     connectWallet,
     disconnectWallet,
-    switchNetwork,
-    signMessage
-  } = useWallet()
+    balance,
+    error,
+  } = useWeb3();
+  const [copied, setCopied] = useState(false);
 
-  const [showDetails, setShowDetails] = useState(false)
-  const [signMessageText, setSignMessageText] = useState('')
-  const [signedMessage, setSignedMessage] = useState('')
-  const [isSigningMessage, setIsSigningMessage] = useState(false)
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  const handleSignMessage = async () => {
-    if (!signMessageText.trim()) return
-
-    setIsSigningMessage(true)
-    try {
-      const signature = await signMessage(signMessageText)
-      setSignedMessage(signature)
-    } catch (error) {
-      console.error('Error signing message:', error)
-    } finally {
-      setIsSigningMessage(false)
-    }
-  }
-
-  const theme = {
-    bg: isDark ? 'bg-gray-900' : 'bg-gray-50',
-    card: isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
-    text: isDark ? 'text-white' : 'text-gray-900',
-    textSecondary: isDark ? 'text-gray-300' : 'text-gray-600',
-    input: isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900',
-    button: isDark ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
-  }
-
-  if (!isConnected) {
-    return (
-      <div className={`p-6 rounded-xl border ${theme.card}`}>
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          
-          <h3 className={`text-xl font-bold mb-2 ${theme.text}`}>Connect Your Wallet</h3>
-          <p className={`mb-6 ${theme.textSecondary}`}>
-            Connect your MetaMask wallet to access blockchain features
-          </p>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg">
-              <p className="text-red-700 text-sm">{error}</p>
-            </div>
-          )}
-
-          <button
-            onClick={connectWallet}
-            disabled={isLoading}
-            className={`w-full py-3 px-6 ${theme.button} text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2`}
-          >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Connecting...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <span>Connect MetaMask</span>
-              </>
-            )}
-          </button>
-
-          <div className="mt-4 text-xs text-gray-500">
-            <p>Don't have MetaMask? <a href="https://metamask.io" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600">Download here</a></p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const formatAddress = (address: string | undefined) => {
+    if (!address) return "";
+    return `${address.substring(0, 6)}...${address.substring(
+      address.length - 4
+    )}`;
+  };
 
   return (
-    <div className={`p-6 rounded-xl border ${theme.card}`}>
-      {/* Wallet Status */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className={`font-semibold ${theme.text}`}>Wallet Connected</h3>
-            <p className={`text-sm ${theme.textSecondary}`}>
-              {formatAddress(address || '')}
-            </p>
-          </div>
-        </div>
-        
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className={`p-2 rounded-lg hover:bg-gray-600 ${theme.textSecondary}`}
-        >
-          <svg className={`w-5 h-5 transform transition-transform ${showDetails ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Wallet Connection</h1>
+        <p className="text-gray-600">
+          Connect your wallet to interact with the blockchain
+        </p>
       </div>
 
-      {/* Wallet Details */}
-      {showDetails && (
-        <div className="space-y-4 mb-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className={`p-3 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <p className={`text-xs ${theme.textSecondary} mb-1`}>Balance</p>
-              <p className={`font-semibold ${theme.text}`}>{balance} ETH</p>
-            </div>
-            <div className={`p-3 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <p className={`text-xs ${theme.textSecondary} mb-1`}>Network</p>
-              <p className={`font-semibold ${theme.text} text-xs`}>
-                {chainId ? getNetworkName(chainId) : 'Unknown'}
-              </p>
-            </div>
-          </div>
-
-          {/* Network Switching */}
-          <div>
-            <p className={`text-sm font-medium mb-2 ${theme.text}`}>Switch Network</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { id: 1, name: 'Ethereum' },
-                { id: 5, name: 'Goerli' },
-                { id: 137, name: 'Polygon' },
-                { id: 80001, name: 'Mumbai' }
-              ].map((network) => (
-                <button
-                  key={network.id}
-                  onClick={() => switchNetwork(network.id)}
-                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                    chainId === network.id
-                      ? 'bg-blue-500 text-white border-blue-500'
-                      : `${theme.textSecondary} border-gray-300 hover:border-blue-500`
-                  }`}
-                >
-                  {network.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Message Signing */}
-          <div>
-            <p className={`text-sm font-medium mb-2 ${theme.text}`}>Sign Message</p>
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={signMessageText}
-                onChange={(e) => setSignMessageText(e.target.value)}
-                placeholder="Enter message to sign..."
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${theme.input}`}
-              />
-              <button
-                onClick={handleSignMessage}
-                disabled={!signMessageText.trim() || isSigningMessage}
-                className={`w-full py-2 px-4 ${theme.button} text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isSigningMessage ? 'Signing...' : 'Sign Message'}
-              </button>
-              
-              {signedMessage && (
-                <div className={`p-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <p className={`text-xs ${theme.textSecondary} mb-1`}>Signature:</p>
-                  <p className={`text-xs font-mono break-all ${theme.text}`}>
-                    {signedMessage}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Wallet className="h-5 w-5 mr-2" />
+            Wallet Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isActive ? (
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-green-800 mb-2">
+                  Wallet Connected
+                </h2>
+                <p className="text-green-700 mb-4">
+                  Your wallet is successfully connected to the ProTrack network
+                </p>
+                <div className="bg-gray-100 p-4 rounded-md font-mono text-sm break-all flex items-center justify-between">
+                  <span>{formatAddress(account)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => account && copyToClipboard(account)}
+                    className="ml-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                {copied && (
+                  <p className="text-green-600 text-sm mt-2">
+                    Address copied to clipboard!
                   </p>
+                )}
+              </div>
+
+              {balance && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-medium text-blue-800 mb-2">
+                    Account Balance
+                  </h3>
+                  <p className="text-blue-700 text-2xl font-bold">{balance}</p>
                 </div>
               )}
+
+              {chainId && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Network className="h-5 w-5 text-purple-500 mr-2" />
+                    <h3 className="font-medium text-purple-800">
+                      Network Information
+                    </h3>
+                  </div>
+                  <div className="mt-2">
+                    <p className="text-purple-700">
+                      <span className="font-medium">Chain ID:</span> {chainId}
+                    </p>
+                    <p className="text-purple-700">
+                      <span className="font-medium">Network:</span>{" "}
+                      {getSupportedNetwork(chainId)?.name || "Unknown"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-center">
+                <Button
+                  onClick={disconnectWallet}
+                  variant="outline"
+                  className="flex items-center"
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Disconnect Wallet
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-yellow-800 mb-2">
+                  Wallet Not Connected
+                </h2>
+                <p className="text-yellow-700 mb-4">
+                  Connect your wallet to interact with ProTrack smart contracts
+                </p>
+              </div>
 
-      {/* Disconnect Button */}
-      <button
-        onClick={disconnectWallet}
-        className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-      >
-        Disconnect Wallet
-      </button>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-700">{error}</p>
+                </div>
+              )}
+
+              <div className="flex justify-center">
+                <Button onClick={connectWallet} className="flex items-center">
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Connect Wallet
+                </Button>
+              </div>
+
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Supported Wallets
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="border rounded-lg p-4 text-center">
+                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto mb-3" />
+                    <h4 className="font-medium">MetaMask</h4>
+                    <p className="text-sm text-gray-500">
+                      Most popular browser extension
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-4 text-center">
+                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto mb-3" />
+                    <h4 className="font-medium">WalletConnect</h4>
+                    <p className="text-sm text-gray-500">
+                      Mobile wallet integration
+                    </p>
+                  </div>
+                  <div className="border rounded-lg p-4 text-center">
+                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto mb-3" />
+                    <h4 className="font-medium">Coinbase Wallet</h4>
+                    <p className="text-sm text-gray-500">
+                      Secure mobile wallet
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
-  )
-}
+  );
+};
 
-export default WalletConnect
+export default WalletConnect;

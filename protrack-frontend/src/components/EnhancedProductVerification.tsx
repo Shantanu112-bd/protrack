@@ -52,7 +52,7 @@ export const EnhancedProductVerification: React.FC<
 
       // Initialize the service (mock implementation)
       // In a real implementation, we would initialize with a proper provider
-      service.initialize(null as unknown as ethers.providers.Provider);
+      service.initialize(null as unknown as ethers.providers.Web3Provider);
       setVerificationService(service);
     }
   }, [web3, isConnected]);
@@ -116,22 +116,19 @@ export const EnhancedProductVerification: React.FC<
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/10 to-gray-900">
-      <div className="max-w-7xl mx-auto px-6 py-10">
+    <div className="min-h-screen bg-gradient-to-br from-blockchain-50 via-white to-supply-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl mb-6 shadow-lg">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Enhanced Product Verification
           </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Verify product authenticity with blockchain proof and zero-knowledge
             verification
           </p>

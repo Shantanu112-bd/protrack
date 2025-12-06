@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  # Blockchain node
+  blockchain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: protrack-blockchain
+    ports:
+      - "8545:8545"
+    command: ["npx", "hardhat", "node"]
+    volumes:
+      - ./contracts:/app/contracts
+      - ./scripts:/app/scripts
+    networks:
+      - protrack-network
+
+  # Frontend application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: protrack-frontend
+    ports:
+      - "3000:3000"
+    command: ["npm", "run", "dev"]
+    volumes:
+      - ./protrack-frontend:/app/protrack-frontend
+      - ./contracts/artifacts:/app/contracts/artifacts
+    depends_on:
+      - blockchain
+    networks:
+      - protrack-network
+
+  # Deploy contracts
+  deploy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: protrack-deploy
+    command:
+      [
+        "sh",
+        "-c",
+        "sleep 10 && npx hardhat run scripts/deploy-unified.js --network localhost",
+      ]
+    volumes:
+      - ./contracts:/app/contracts
+      - ./scripts:/app/scripts
+      - ./protrack-frontend/src/config:/app/protrack-frontend/src/config
+    depends_on:
+      - blockchain
+    networks:
+      - protrack-network
+
+networks:
+  protrack-network:
+    driver: bridge

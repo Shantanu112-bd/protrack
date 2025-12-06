@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useWeb3 } from "./hooks/useWeb3";
+import { useNavigate } from "react-router-dom";
+import { useWeb3 } from "./contexts/web3ContextTypes";
 import WalletConnection from "./components/WalletConnection";
 
 type UserType =
@@ -12,6 +13,7 @@ type UserType =
 const SignInPage: React.FC = () => {
   const { isActive, account } = useWeb3();
   const [userType, setUserType] = useState<UserType>("consumer");
+  const navigate = useNavigate();
 
   const userTypeOptions: {
     id: UserType;
@@ -54,8 +56,7 @@ const SignInPage: React.FC = () => {
   const handleSignIn = () => {
     // In a real app, this would authenticate with a backend
     // For now, we'll just redirect to the main dashboard
-    window.location.hash = "/dashboard";
-    window.location.reload();
+    navigate("/dashboard");
   };
 
   return (

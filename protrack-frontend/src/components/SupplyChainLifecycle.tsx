@@ -116,7 +116,7 @@ const SupplyChainLifecycle: React.FC = () => {
           type: "success",
           title: "Product Manufactured",
           message: `Product "${productData?.name}" minted as NFT with Token ID: ${result.tokenId}`,
-          relatedTokenId: result.tokenId,
+          relatedTokenId: result.tokenId as number,
         });
 
         // Add toast notification
@@ -186,7 +186,7 @@ const SupplyChainLifecycle: React.FC = () => {
           type: "info",
           title: "Product Packaged",
           message: `Product packaged with IoT verification completed for Token ID: ${productData?.tokenId}`,
-          relatedTokenId: productData?.tokenId,
+          relatedTokenId: productData?.tokenId as number,
         });
 
         // Add toast notification
@@ -249,7 +249,7 @@ const SupplyChainLifecycle: React.FC = () => {
           type: "info",
           title: "Shipment Initiated",
           message: `Product shipped to ${result.to.substring(0, 10)}...`,
-          relatedTokenId: productData?.tokenId,
+          relatedTokenId: productData?.tokenId as number,
         });
 
         // Add toast notification
@@ -305,7 +305,7 @@ const SupplyChainLifecycle: React.FC = () => {
           type: "success",
           title: "Shipment Received",
           message: `Product received and verified successfully`,
-          relatedTokenId: productData?.tokenId,
+          relatedTokenId: productData?.tokenId as number,
         });
 
         // Add toast notification
@@ -361,7 +361,7 @@ const SupplyChainLifecycle: React.FC = () => {
           type: "success",
           title: "Product Verified",
           message: `Product authenticity verified for customer`,
-          relatedTokenId: productData?.tokenId,
+          relatedTokenId: productData?.tokenId as number,
         });
 
         // Add toast notification
@@ -407,6 +407,16 @@ const SupplyChainLifecycle: React.FC = () => {
       <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
         Supply Chain Lifecycle
       </h2>
+
+      {/* Wallet connection warning */}
+      {!isActive && (
+        <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+          <p className="text-yellow-800 dark:text-yellow-200 text-center">
+            Please connect your wallet to interact with the supply chain
+            lifecycle
+          </p>
+        </div>
+      )}
 
       {/* Status indicator */}
       <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">

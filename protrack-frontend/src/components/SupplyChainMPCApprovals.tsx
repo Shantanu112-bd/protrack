@@ -15,7 +15,6 @@ import {
   User,
 } from "lucide-react";
 import { useEnhancedWeb3 } from "../contexts/EnhancedWeb3Context";
-import { mpcService } from "../services/mpcService";
 
 interface SupplyChainTransaction {
   txHash: string;
@@ -40,7 +39,7 @@ interface SupplyChainTransaction {
 }
 
 const SupplyChainMPCApprovals: React.FC = () => {
-  const { account, isConnected } = useEnhancedWeb3();
+  const { account, isConnected, signMPCTransaction } = useEnhancedWeb3();
 
   const [pendingTransactions, setPendingTransactions] = useState<
     SupplyChainTransaction[]
@@ -176,11 +175,10 @@ const SupplyChainMPCApprovals: React.FC = () => {
     }
   };
 
-  const handleApproveTransaction = async (txHash: string) => {
+  const handleApproveTransaction = async (txHash: string, walletId: number) => {
     setLoading(true);
     try {
-      // Approve the transaction using the MPC service
-      await mpcService.approveTransaction(txHash);
+      await signMPCTransaction(walletId, txHash);
 
       // Update local state
       setPendingTransactions((prev) =>
@@ -218,19 +216,8 @@ const SupplyChainMPCApprovals: React.FC = () => {
 
     setLoading(true);
     try {
-      // Create operation hash (simplified for demo)
-      const operationData = `${proposalData.productId}${proposalData.toParty}${proposalData.operation}`;
-      const operationHash = `0x${Array.from(
-        new TextEncoder().encode(operationData)
-      )
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")}`;
-
-      // Initiate transaction using the MPC service
-      const txHash = await mpcService.initiateTransaction(
-        `key_${proposalData.productId}`, // Simple key ID mapping
-        operationHash
-      );
+      // In a real implementation, this would interact with the smart contract
+      const txHash = `0x${Math.random().toString(16).substr(2, 40)}`;
 
       // Add to pending transactions
       const newTransaction: SupplyChainTransaction = {
@@ -530,7 +517,9 @@ const SupplyChainMPCApprovals: React.FC = () => {
               {/* Approval Button */}
               {isUserSigner(tx.signers) && !hasUserApproved(tx.approvals) && (
                 <button
-                  onClick={() => handleApproveTransaction(tx.txHash)}
+                  onClick={() =>
+                    handleApproveTransaction(tx.txHash, tx.productId)
+                  }
                   disabled={
                     loading || tx.signatureCount >= tx.requiredSignatures
                   }

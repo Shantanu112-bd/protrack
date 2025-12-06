@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useWeb3 } from "../hooks/useWeb3";
+import { useWeb3 } from "../contexts/Web3Context";
 import SupplyChainService from "../services/supplyChainService";
 import Web3 from "web3";
 import { useToast } from "../contexts/ToastContext";

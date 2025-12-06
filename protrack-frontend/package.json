@@ -17,7 +17,8 @@
     "build:analyze": "npm run build && npx vite-bundle-analyzer dist",
     "demo": "bash run-demo.sh",
     "terminal-demo": "npx tsx src/terminal-demo.ts",
-    "browser": "bash run-in-browser.sh"
+    "browser": "bash run-in-browser.sh",
+    "health": "npx tsx src/test-health.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

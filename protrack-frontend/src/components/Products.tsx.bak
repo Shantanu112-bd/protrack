@@ -1,0 +1,651 @@
+import React, { useState, useEffect } from "react";
+import { useWeb3 } from "../contexts/web3ContextTypes";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
+import { Badge } from "./ui/badge";
+import {
+  MapPin,
+  Package,
+  Search,
+  Filter,
+  Eye,
+  QrCode,
+  PlusCircle,
+  TrendingUp,
+  Calendar,
+  User,
+  Zap,
+  BarChart3,
+  Download,
+  RefreshCw,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+// Define types
+interface Product {
+  id: number;
+  rfid: string;
+  barcode: string;
+  name: string;
+  batch: string;
+  status: string;
+  owner: string;
+  location: string;
+  lastUpdate: string;
+}
+
+const Products = () => {
+  const { isActive } = useWeb3();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+
+  // Mock data for demonstration
+  useEffect(() => {
+    setProducts([
+      {
+        id: 1,
+        rfid: "RFID-001-ABC",
+        barcode: "BARCODE-12345",
+        name: "Organic Coffee Beans",
+        batch: "BATCH-2023-001",
+        status: "In Transit",
+        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+        location: "Warehouse A, New York",
+        lastUpdate: "2023-12-01 14:30:00",
+      },
+      {
+        id: 2,
+        rfid: "RFID-002-DEF",
+        barcode: "BARCODE-67890",
+        name: "Premium Chocolate",
+        batch: "BATCH-2023-002",
+        status: "Received",
+        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+        location: "Store B, Los Angeles",
+        lastUpdate: "2023-12-02 09:15:00",
+      },
+      {
+        id: 3,
+        rfid: "RFID-003-GHI",
+        barcode: "BARCODE-11111",
+        name: "Organic Honey",
+        batch: "BATCH-2023-003",
+        status: "Manufactured",
+        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+        location: "Factory C, Chicago",
+        lastUpdate: "2023-12-03 11:45:00",
+      },
+      {
+        id: 4,
+        rfid: "RFID-004-JKL",
+        barcode: "BARCODE-22222",
+        name: "Artisanal Cheese",
+        batch: "BATCH-2023-004",
+        status: "Packaged",
+        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+        location: "Packaging Facility D, Boston",
+        lastUpdate: "2023-12-04 16:20:00",
+      },
+      {
+        id: 5,
+        rfid: "RFID-005-MNO",
+        barcode: "BARCODE-33333",
+        name: "Cold-Pressed Olive Oil",
+        batch: "BATCH-2023-005",
+        status: "In Transit",
+        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+        location: "Distribution Center E, Miami",
+        lastUpdate: "2023-12-05 10:45:00",
+      },
+    ]);
+  }, []);
+
+  // Refresh products data
+  const refreshProducts = () => {
+    // In a real app, this would fetch fresh data from the blockchain
+    console.log("Refreshing products data...");
+  };
+
+  // Export products data
+  const exportProducts = () => {
+    // In a real app, this would export data to CSV/PDF
+    console.log("Exporting products data...");
+  };
+
+  // Filter products based on search term and status
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.rfid.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.barcode.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      product.status.toLowerCase() === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Format status badge
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "manufactured":
+        return (
+          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
+            Manufactured
+          </Badge>
+        );
+      case "packaged":
+        return (
+          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
+            Packaged
+          </Badge>
+        );
+      case "in transit":
+        return (
+          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
+            In Transit
+          </Badge>
+        );
+      case "received":
+        return (
+          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+            Received
+          </Badge>
+        );
+      case "sold":
+        return (
+          <Badge className="bg-gradient-to-r from-gray-500 to-gray-700 hover:from-gray-600 hover:to-gray-800">
+            Sold
+          </Badge>
+        );
+      case "recalled":
+        return (
+          <Badge className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600">
+            Recalled
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gradient-to-r from-gray-300 to-gray-500 hover:from-gray-400 hover:to-gray-600">
+            {status}
+          </Badge>
+        );
+    }
+  };
+
+  // View product details
+  const viewProductDetails = (product: Product) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
+  };
+
+  // Close product modal
+  const closeProductModal = () => {
+    setShowProductModal(false);
+    setSelectedProduct(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Products
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Manage and track your supply chain products
+          </p>
+        </div>
+        <div className="mt-4 md:mt-0 flex space-x-3">
+          <Button
+            onClick={refreshProducts}
+            className="flex items-center bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            <RefreshCw className="h-5 w-5 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            onClick={exportProducts}
+            className="flex items-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            <Download className="h-5 w-5 mr-2" />
+            Export
+          </Button>
+          <Link to="/mint">
+            <Button className="flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+              <PlusCircle className="h-5 w-5 mr-2" />
+              Mint New Product
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Wallet connection warning */}
+      {!isActive && (
+        <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl p-4 text-center shadow-lg">
+          <div className="flex items-center justify-center">
+            <Package className="h-5 w-5 text-yellow-600 mr-2" />
+            <span className="text-yellow-800 font-medium">
+              Wallet not connected - Connect to interact with blockchain features
+            </span>
+          </div>
+        </div>
+      )}
+      <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Package className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-gray-600">Total Products</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {products.length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-gray-600">In Transit</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {products.filter((p) => p.status === "In Transit").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-gray-600">Manufactured</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {
+                        products.filter((p) => p.status === "Manufactured")
+                          .length
+                      }
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <Zap className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm text-gray-600">Active</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {
+                        products.filter(
+                          (p) => p.status !== "Sold" && p.status !== "Recalled"
+                        ).length
+                      }
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center text-gray-800">
+                <Filter className="h-5 w-5 mr-2 text-blue-500" />
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-4 md:space-y-0">
+              <div className="flex-1">
+                <Label htmlFor="search" className="sr-only">
+                  Search
+                </Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="search"
+                    placeholder="Search by name, RFID, or barcode..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 py-3 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                  />
+                </div>
+              </div>
+              <div className="w-full md:w-64">
+                <Label htmlFor="status" className="sr-only">
+                  Status
+                </Label>
+                <select
+                  id="status"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="block w-full rounded-xl border-2 border-gray-200 bg-white py-3 px-4 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="manufactured">Manufactured</option>
+                  <option value="packaged">Packaged</option>
+                  <option value="in transit">In Transit</option>
+                  <option value="received">Received</option>
+                  <option value="sold">Sold</option>
+                  <option value="recalled">Recalled</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Products Table */}
+          <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+            <CardHeader>
+              <CardTitle className="text-gray-800">Product List</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Product
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        RFID
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Batch ID
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Location
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Last Update
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow
+                        key={product.id}
+                        className="hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                              <Package className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">
+                                {product.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                ID: {product.id}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {product.rfid}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {product.batch}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(product.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-gray-600">
+                            <MapPin className="h-4 w-4 mr-1 text-gray-500" />
+                            <span className="text-sm">{product.location}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {product.lastUpdate}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => viewProductDetails(product)}
+                              className="border-gray-300 hover:bg-gray-100 transition-colors"
+                            >
+                              <Eye className="h-4 w-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-300 hover:bg-gray-100 transition-colors"
+                            >
+                              <QrCode className="h-4 w-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-300 hover:bg-gray-100 transition-colors"
+                            >
+                              <Edit className="h-4 w-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-red-300 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* Product Detail Modal */}
+      {showProductModal && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {selectedProduct.name}
+                  </h2>
+                  <p className="text-gray-600">Product Details</p>
+                </div>
+                <button
+                  onClick={closeProductModal}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-xl p-5">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <Package className="h-5 w-5 mr-2 text-blue-500" />
+                    Product Information
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Product ID:</span>
+                      <span className="font-medium">#{selectedProduct.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">RFID:</span>
+                      <span className="font-mono text-sm">
+                        {selectedProduct.rfid}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Barcode:</span>
+                      <span className="font-mono text-sm">
+                        {selectedProduct.barcode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Batch:</span>
+                      <span className="font-medium">
+                        {selectedProduct.batch}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-5">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <User className="h-5 w-5 mr-2 text-purple-500" />
+                    Ownership
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Current Owner:</span>
+                      <span className="font-mono text-sm">
+                        {selectedProduct.owner.substring(0, 6)}...
+                        {selectedProduct.owner.substring(
+                          selectedProduct.owner.length - 4
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span>{getStatusBadge(selectedProduct.status)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Location:</span>
+                      <span className="flex items-center">
+                        <MapPin className="h-4 w-4 mr-1 text-gray-500" />
+                        {selectedProduct.location}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-5 md:col-span-2">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <Calendar className="h-5 w-5 mr-2 text-green-500" />
+                    Timeline
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex">
+                      <div className="flex flex-col items-center mr-4">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <div className="w-0.5 h-full bg-green-300"></div>
+                      </div>
+                      <div className="pb-4">
+                        <p className="font-medium">Product Created</p>
+                        <p className="text-sm text-gray-600">
+                          2023-11-28 09:00:00
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex">
+                      <div className="flex flex-col items-center mr-4">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <div className="w-0.5 h-full bg-blue-300"></div>
+                      </div>
+                      <div className="pb-4">
+                        <p className="font-medium">Manufactured</p>
+                        <p className="text-sm text-gray-600">
+                          2023-11-30 14:30:00
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex">
+                      <div className="flex flex-col items-center mr-4">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <div className="w-0.5 h-full bg-purple-300"></div>
+                      </div>
+                      <div className="pb-4">
+                        <p className="font-medium">Packaged</p>
+                        <p className="text-sm text-gray-600">
+                          2023-12-01 10:15:00
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex">
+                      <div className="flex flex-col items-center mr-4">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      </div>
+                      <div>
+                        <p className="font-medium">In Transit</p>
+                        <p className="text-sm text-gray-600">
+                          {selectedProduct.lastUpdate}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  className="border-gray-300 hover:bg-gray-100"
+                >
+                  View on Blockchain
+                </Button>
+                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                  Transfer Custody
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Products;

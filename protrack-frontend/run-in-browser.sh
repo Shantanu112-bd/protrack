@@ -55,6 +55,12 @@ echo -e "  Demo Mode (no blockchain required): ${YELLOW}http://localhost:5173/?d
 echo -e "  Service Demo Mode: ${YELLOW}http://localhost:5173/?browser-demo=true${NC}"
 echo -e "  Full Application: ${YELLOW}http://localhost:5173${NC}"
 echo ""
+echo -e "${YELLOW}Note: If you're experiencing HTTPS loading issues, try accessing via HTTP instead.${NC}"
+echo -e "${YELLOW}For production deployment with HTTPS, configure your reverse proxy (nginx, Apache) to handle SSL termination.${NC}"
+echo ""
+echo -e "${BLUE}Health Check:${NC}"
+echo -e "  Run ${YELLOW}npm run health${NC} to verify the application is working correctly"
+echo ""
 echo -e "${BLUE}To stop the server, press Ctrl+C${NC}"
 echo ""
 

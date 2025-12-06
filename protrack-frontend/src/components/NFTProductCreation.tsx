@@ -182,6 +182,7 @@ const NFTProductCreation: React.FC<NFTProductCreationProps> = ({
           </div>
         </div>
 
+        {/* Wallet connection warning */}
         {!isActive && (
           <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
             <p

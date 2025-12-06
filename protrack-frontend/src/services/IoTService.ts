@@ -1,9 +1,7 @@
 import { supabase, trackingService } from "./supabase";
-import Web3 from "web3";
-import { supplyChainService } from "./supplyChainService";
+import { ethers } from "ethers";
 import ProTrackAdvancedIoTABI from "../contracts/ProTrackAdvancedIoT.json";
 import ProTrackSupplyChainABI from "../contracts/ProTrackSupplyChain.json";
-import { CONTRACT_ADDRESSES } from "../config/contractConfig";
 
 // Define types for better TypeScript support
 interface SensorData {
@@ -67,36 +65,14 @@ interface DeviceData {
   enableEncryption: boolean;
 }
 
-// Define contract event type
-interface ContractEvent {
-  dataHash?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: string | number | boolean | undefined | any;
-}
-
-// Define contract type
-interface Contract {
-  methods: {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: (...args: any[]) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      send: (options: { from: string; value?: string }) => Promise<any>;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      call: () => Promise<any>;
-    };
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  events?: any;
-}
-
 // Enhanced IoT service that connects to actual smart contracts
 class IoTService {
   private iotContractAddress: string;
   private supplyChainContractAddress: string;
-  private web3: Web3 | null = null;
-  private accounts: string[] | null = null;
-  private iotContract: Contract | null = null;
-  private supplyChainContract: Contract | null = null;
+  private provider: ethers.providers.Web3Provider | null = null;
+  private signer: ethers.Signer | null = null;
+  private iotContract: ethers.Contract | null = null;
+  private supplyChainContract: ethers.Contract | null = null;
   private isConnected = false;
   private listeners: Map<string, ((data: IoTEvent) => void)[]> = new Map();
 
@@ -105,22 +81,20 @@ class IoTService {
     this.supplyChainContractAddress = supplyChainContractAddress;
   }
 
-  async connect(web3: Web3) {
+  async connect(provider: ethers.providers.Web3Provider) {
     try {
-      this.web3 = web3;
-      this.accounts = await web3.eth.getAccounts();
-
-      // Initialize contracts using supplyChainService's web3 instance
-      this.iotContract = new web3.eth.Contract(
+      this.provider = provider;
+      this.signer = provider.getSigner();
+      this.iotContract = new ethers.Contract(
+        this.iotContractAddress,
         ProTrackAdvancedIoTABI.abi,
-        this.iotContractAddress
-      ) as unknown as Contract;
-
-      this.supplyChainContract = new web3.eth.Contract(
+        this.signer
+      );
+      this.supplyChainContract = new ethers.Contract(
+        this.supplyChainContractAddress,
         ProTrackSupplyChainABI.abi,
-        this.supplyChainContractAddress
-      ) as unknown as Contract;
-
+        this.signer
+      );
       this.isConnected = true;
       console.log("IoT Service connected to blockchain");
 
@@ -164,7 +138,7 @@ class IoTService {
       // Record IoT data in Supabase
       await trackingService.recordIoTData(product.id, sensorData);
 
-      // Submit encrypted sensor data to blockchain using supplyChainService
+      // Submit encrypted sensor data to blockchain
       const deviceId = `DEVICE_${Math.random()
         .toString(36)
         .substr(2, 9)
@@ -172,48 +146,54 @@ class IoTService {
       const sequenceNumber = Math.floor(Date.now() / 1000);
 
       // Encrypt sensor data (simplified for demo)
-      const encryptedValue =
-        this.web3?.utils.sha3(JSON.stringify(sensorData)) || "";
-
-      const dataHash =
-        this.web3?.utils.sha3(
-          `${deviceId}${product.token_id}${sequenceNumber}${encryptedValue}`
-        ) || "";
-
-      // Create signature (simplified for demo)
-      const signature = this.web3?.utils.sha3(`${dataHash}${deviceId}`) || "";
-
-      // Submit to IoT contract using supplyChainService
-      const result = await supplyChainService.submitIoTData(
-        deviceId,
-        this.getSensorTypeCode(sensorData),
-        this.getSensorValue(sensorData),
-        this.getSensorUnit(sensorData),
-        "0,0", // gpsCoordinates
-        JSON.stringify({ sequenceNumber, dataHash, signature })
+      const encryptedValue = ethers.utils.keccak256(
+        ethers.utils.toUtf8Bytes(JSON.stringify(sensorData))
       );
 
-      if (result.success) {
-        // Emit data processed event
-        this.emit("data-processed", {
-          rfidTag,
-          sensorData,
-          dataHash,
-          txHash: result.transactionHash,
-          timestamp: new Date().toISOString(),
-        });
+      const dataHash = ethers.utils.keccak256(
+        ethers.utils.toUtf8Bytes(
+          `${deviceId}${product.token_id}${sequenceNumber}${encryptedValue}`
+        )
+      );
 
-        // Check for alerts
-        this.checkAlerts(product.id, sensorData);
+      // Create signature (simplified for demo)
+      const signature = ethers.utils.keccak256(
+        ethers.utils.toUtf8Bytes(`${dataHash}${deviceId}`)
+      );
 
-        return {
-          success: true,
-          dataHash,
-          txHash: result.transactionHash,
-        };
-      } else {
-        throw new Error(result.error);
-      }
+      // Submit to IoT contract
+      const tx = await this.iotContract.submitEncryptedSensorData(
+        deviceId,
+        product.token_id,
+        this.getSensorType(sensorData),
+        encryptedValue,
+        "0x", // encryptedMetadata
+        this.getSensorUnit(sensorData),
+        "0,0", // gpsCoordinates
+        sequenceNumber,
+        dataHash,
+        signature
+      );
+
+      await tx.wait();
+
+      // Emit data processed event
+      this.emit("data-processed", {
+        rfidTag,
+        sensorData,
+        dataHash,
+        txHash: tx.hash,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Check for alerts
+      this.checkAlerts(product.id, sensorData);
+
+      return {
+        success: true,
+        dataHash,
+        txHash: tx.hash,
+      };
     } catch (error) {
       console.error("Failed to process IoT data:", error);
       this.emit("error", {
@@ -230,24 +210,13 @@ class IoTService {
     }
   }
 
-  // Get sensor type code from data
-  private getSensorTypeCode(sensorData: SensorData): number {
-    if (sensorData.temperature !== undefined) return 0; // TEMPERATURE
-    if (sensorData.humidity !== undefined) return 1; // HUMIDITY
-    if (sensorData.shock !== undefined) return 3; // VIBRATION/SHOCK
-    if (sensorData.light_exposure !== undefined) return 4; // LIGHT
-    return 7; // CUSTOM
-  }
-
-  // Get sensor value from data
-  private getSensorValue(sensorData: SensorData): number {
-    if (sensorData.temperature !== undefined) return sensorData.temperature;
-    if (sensorData.humidity !== undefined) return sensorData.humidity;
-    if (sensorData.shock !== undefined) return sensorData.shock;
-    if (sensorData.light_exposure !== undefined)
-      return sensorData.light_exposure;
-    if (sensorData.battery !== undefined) return sensorData.battery;
-    return 0;
+  // Get sensor type from data
+  private getSensorType(sensorData: SensorData): string {
+    if (sensorData.temperature !== undefined) return "temperature";
+    if (sensorData.humidity !== undefined) return "humidity";
+    if (sensorData.shock !== undefined) return "shock";
+    if (sensorData.light_exposure !== undefined) return "light";
+    return "generic";
   }
 
   // Get sensor unit from data
@@ -256,7 +225,6 @@ class IoTService {
     if (sensorData.humidity !== undefined) return "%";
     if (sensorData.shock !== undefined) return "G";
     if (sensorData.light_exposure !== undefined) return "lux";
-    if (sensorData.battery !== undefined) return "%";
     return "unit";
   }
 
@@ -417,50 +385,51 @@ class IoTService {
         };
 
         // Encrypt GPS data (simplified for demo)
-        const encryptedValue =
-          this.web3?.utils.sha3(JSON.stringify(gpsData)) || "";
-
-        const dataHash =
-          this.web3?.utils.sha3(
-            `${deviceId}${product.token_id}${sequenceNumber}${encryptedValue}`
-          ) || "";
-
-        // Create signature (simplified for demo)
-        const signature = this.web3?.utils.sha3(`${dataHash}${deviceId}`) || "";
-
-        // Submit to IoT contract using supplyChainService
-        const result = await supplyChainService.submitIoTData(
-          deviceId,
-          5, // GPS sensor type
-          0, // Value not used for GPS
-          "coordinates",
-          `${location.latitude},${location.longitude}`,
-          JSON.stringify({
-            sequenceNumber,
-            dataHash,
-            signature,
-            gpsData,
-          })
+        const encryptedValue = ethers.utils.keccak256(
+          ethers.utils.toUtf8Bytes(JSON.stringify(gpsData))
         );
 
-        if (result.success) {
-          // Emit location updated event
-          this.emit("location-updated", {
-            rfidTag,
-            location,
-            dataHash,
-            txHash: result.transactionHash,
-            timestamp: new Date().toISOString(),
-          });
+        const dataHash = ethers.utils.keccak256(
+          ethers.utils.toUtf8Bytes(
+            `${deviceId}${product.token_id}${sequenceNumber}${encryptedValue}`
+          )
+        );
 
-          return {
-            success: true,
-            dataHash,
-            txHash: result.transactionHash,
-          };
-        } else {
-          throw new Error(result.error);
-        }
+        // Create signature (simplified for demo)
+        const signature = ethers.utils.keccak256(
+          ethers.utils.toUtf8Bytes(`${dataHash}${deviceId}`)
+        );
+
+        // Submit to IoT contract
+        const tx = await this.iotContract.submitEncryptedSensorData(
+          deviceId,
+          product.token_id,
+          "gps",
+          encryptedValue,
+          "0x", // encryptedMetadata
+          "coordinates",
+          `${location.latitude},${location.longitude}`,
+          sequenceNumber,
+          dataHash,
+          signature
+        );
+
+        await tx.wait();
+
+        // Emit location updated event
+        this.emit("location-updated", {
+          rfidTag,
+          location,
+          dataHash,
+          txHash: tx.hash,
+          timestamp: new Date().toISOString(),
+        });
+
+        return {
+          success: true,
+          dataHash,
+          txHash: tx.hash,
+        };
       }
 
       return {
@@ -492,14 +461,16 @@ class IoTService {
         throw new Error(`Product with RFID ${rfidTag} not found`);
       }
 
-      // Get blockchain data using supplyChainService
-      const blockchainResult = await supplyChainService.getProductByRFID(
-        rfidTag
-      );
+      // Get blockchain data if connected
       let blockchainData = null;
-
-      if (blockchainResult.success) {
-        blockchainData = blockchainResult.data;
+      if (this.isConnected && this.supplyChainContract) {
+        try {
+          blockchainData = await this.supplyChainContract.getProductByRFID(
+            rfidTag
+          );
+        } catch (error) {
+          console.warn("Could not fetch blockchain data for product:", error);
+        }
       }
 
       // Emit scan event
@@ -543,27 +514,22 @@ class IoTService {
         throw new Error(`Product with RFID ${rfidTag} not found`);
       }
 
-      // Get IoT data from blockchain using supplyChainService
-      const eventsResult = await supplyChainService.getProductEvents(
-        parseInt(product.token_id)
+      // Get IoT data from blockchain
+      const iotDataArray = await this.iotContract.getTokenSensorData(
+        product.token_id
       );
 
-      if (eventsResult.success) {
-        // Check if data hash exists in blockchain records
-        const isVerified = eventsResult.data.some(
-          (event: ContractEvent) =>
-            event.dataHash &&
-            event.dataHash.toLowerCase() === dataHash.toLowerCase()
-        );
+      // Check if data hash exists in blockchain records
+      const isVerified = iotDataArray.some(
+        (data: { dataHash: string }) =>
+          data.dataHash.toLowerCase() === dataHash.toLowerCase()
+      );
 
-        return {
-          success: true,
-          verified: isVerified,
-          tokenId: product.token_id,
-        };
-      } else {
-        throw new Error(eventsResult.error);
-      }
+      return {
+        success: true,
+        verified: isVerified,
+        tokenId: product.token_id,
+      };
     } catch (error) {
       console.error("Failed to verify IoT data:", error);
       return {
@@ -573,19 +539,22 @@ class IoTService {
     }
   }
 
-  // Get IoT dashboard data using supplyChainService
+  // Get IoT dashboard data
   async getDashboardData() {
     try {
-      // Use supplyChainService to get dashboard data
-      // In a real implementation, we would call a specific dashboard function
-      // For now, we'll return mock data
+      if (!this.isConnected || !this.iotContract) {
+        throw new Error("IoT Service not connected");
+      }
+
+      const dashboardData = await this.iotContract.getDashboardData();
+
       return {
         success: true,
         data: {
-          totalDevices: 24,
-          activeDevices: 18,
-          alertsLast24h: 3,
-          dataPointsToday: 142,
+          totalDevices: dashboardData.totalDevices.toNumber(),
+          activeDevices: dashboardData.activeDevices.toNumber(),
+          alertsLast24h: dashboardData.alertsLast24h.toNumber(),
+          dataPointsToday: dashboardData.dataPointsToday.toNumber(),
         },
       };
     } catch (error) {
@@ -597,30 +566,33 @@ class IoTService {
     }
   }
 
-  // Register IoT device using supplyChainService
+  // Register IoT device
   async registerDevice(deviceData: DeviceData) {
     try {
-      if (!this.accounts || this.accounts.length === 0) {
+      if (!this.isConnected || !this.iotContract) {
+        throw new Error("IoT Service not connected");
+      }
+
+      const accounts = await this.provider?.listAccounts();
+      if (!accounts || accounts.length === 0) {
         throw new Error("No accounts available");
       }
 
-      // Register device using supplyChainService
-      const result = await supplyChainService.registerIoTDevice(
+      const tx = await this.iotContract.registerAdvancedDevice(
+        accounts[0], // deviceAddress
         deviceData.deviceId,
-        this.accounts[0], // owner
-        [0, 1, 3, 4, 5], // supported sensors: temperature, humidity, shock, light, gps
-        "0,0", // location
-        JSON.stringify(deviceData)
+        deviceData.deviceType,
+        deviceData.protocol,
+        deviceData.firmwareVersion,
+        deviceData.enableEncryption
       );
 
-      if (result.success) {
-        return {
-          success: true,
-          txHash: result.transactionHash,
-        };
-      } else {
-        throw new Error(result.error);
-      }
+      await tx.wait();
+
+      return {
+        success: true,
+        txHash: tx.hash,
+      };
     } catch (error) {
       console.error("Failed to register device:", error);
       return {
@@ -633,8 +605,10 @@ class IoTService {
 
 // Create and export a singleton instance
 export const iotService = new IoTService(
-  CONTRACT_ADDRESSES.ADVANCED_IOT,
-  CONTRACT_ADDRESSES.SUPPLY_CHAIN
+  import.meta.env.VITE_IOT_CONTRACT_ADDRESS ||
+    "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf",
+  import.meta.env.VITE_SUPPLY_CHAIN_CONTRACT_ADDRESS ||
+    "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82"
 );
 
 export default iotService;

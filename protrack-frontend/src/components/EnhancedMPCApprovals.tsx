@@ -11,7 +11,6 @@ import {
   X,
 } from "lucide-react";
 import { useEnhancedWeb3 } from "../contexts/EnhancedWeb3Context";
-import { mpcService } from "../services/mpcService";
 
 interface ApprovalTransaction {
   txHash: string;
@@ -39,7 +38,13 @@ interface MPCWalletInfo {
 }
 
 const EnhancedMPCApprovals: React.FC = () => {
-  const { account, isConnected } = useEnhancedWeb3();
+  const {
+    account,
+    isConnected,
+    mpcWalletContract,
+    signMPCTransaction,
+    proposeTransaction,
+  } = useEnhancedWeb3();
 
   const [wallets, setWallets] = useState<MPCWalletInfo[]>([]);
   const [pendingTransactions, setPendingTransactions] = useState<
@@ -66,24 +71,37 @@ const EnhancedMPCApprovals: React.FC = () => {
 
   const loadWallets = async () => {
     try {
-      if (!account) return;
-
-      // Get user's wallets from the MPC service
-      const userKeys = await mpcService.getUserKeys(account);
-      const walletPromises = userKeys.map((keyId) => mpcService.getKey(keyId));
-      const walletData = await Promise.all(walletPromises);
-
-      // Convert to the expected format
-      const formattedWallets = walletData.map((wallet, index) => ({
-        walletId: index + 1, // Simple ID for display
-        threshold: wallet.threshold,
-        totalSigners: wallet.totalSigners,
-        isActive: wallet.isActive,
-        nonce: wallet.nonce,
-        signers: wallet.signers,
-      }));
-
-      setWallets(formattedWallets);
+      // In a real implementation, you would fetch the user's wallets from the contract
+      // For now, we'll simulate with mock data
+      const mockWallets: MPCWalletInfo[] = [
+        {
+          walletId: 1,
+          threshold: 2,
+          totalSigners: 3,
+          isActive: true,
+          nonce: 5,
+          signers: [
+            account!,
+            "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
+            "0x8ba1f109551bD432803012645Hac136c0c8416",
+          ],
+        },
+        {
+          walletId: 2,
+          threshold: 3,
+          totalSigners: 5,
+          isActive: true,
+          nonce: 12,
+          signers: [
+            account!,
+            "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
+            "0x8ba1f109551bD432803012645Hac136c0c8416",
+            "0x123456789abcdef123456789abcdef123456789a",
+            "0x987654321fedcba987654321fedcba987654321f",
+          ],
+        },
+      ];
+      setWallets(mockWallets);
     } catch (error) {
       console.error("Error loading wallets:", error);
     }
@@ -91,8 +109,7 @@ const EnhancedMPCApprovals: React.FC = () => {
 
   const loadPendingTransactions = async () => {
     try {
-      // In a real implementation, we would fetch pending transactions from the contract
-      // For now, we'll use mock data but with real wallet information
+      // Mock pending transactions
       const mockTransactions: ApprovalTransaction[] = [
         {
           txHash: "0xabc123def456...",
@@ -105,15 +122,15 @@ const EnhancedMPCApprovals: React.FC = () => {
           requiredSignatures: 2,
           timestamp: Date.now() - 3600000,
           status: "pending",
-          proposer: account || "",
+          proposer: account!,
           signers: [
-            account || "",
+            account!,
             "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
             "0x8ba1f109551bD432803012645Hac136c0c8416",
           ],
           approvals: [
             {
-              signer: account || "",
+              signer: account!,
               timestamp: Date.now() - 3600000,
             },
           ],
@@ -132,7 +149,7 @@ const EnhancedMPCApprovals: React.FC = () => {
           proposer: "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
           signers: [
             "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
-            account || "",
+            account!,
             "0x8ba1f109551bD432803012645Hac136c0c8416",
             "0x123456789abcdef123456789abcdef123456789a",
             "0x987654321fedcba987654321fedcba987654321f",
@@ -155,13 +172,12 @@ const EnhancedMPCApprovals: React.FC = () => {
     }
   };
 
-  const handleApproveTransaction = async (txHash: string) => {
-    if (!account) return;
+  const handleApproveTransaction = async (txHash: string, walletId: number) => {
+    if (!mpcWalletContract || !account) return;
 
     setLoading(true);
     try {
-      // Approve the transaction using the MPC service
-      await mpcService.approveTransaction(txHash);
+      await signMPCTransaction(walletId, txHash);
 
       // Update local state
       setPendingTransactions((prev) =>
@@ -196,18 +212,12 @@ const EnhancedMPCApprovals: React.FC = () => {
       const wallet = wallets.find((w) => w.walletId === selectedWallet);
       if (!wallet) throw new Error("Wallet not found");
 
-      // Create operation hash (simplified for demo)
-      const operationData = `${proposalData.to}${proposalData.value}${proposalData.operation}`;
-      const operationHash = `0x${Array.from(
-        new TextEncoder().encode(operationData)
-      )
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")}`;
-
-      // Initiate transaction using the MPC service
-      const txHash = await mpcService.initiateTransaction(
-        `key_${selectedWallet}`, // Simple key ID mapping
-        operationHash
+      const txHash = await proposeTransaction(
+        selectedWallet,
+        proposalData.to,
+        parseFloat(proposalData.value) || 0,
+        "0x",
+        proposalData.operation
       );
 
       // Add to pending transactions
@@ -224,11 +234,11 @@ const EnhancedMPCApprovals: React.FC = () => {
         requiredSignatures: wallet.threshold,
         timestamp: Date.now(),
         status: "pending",
-        proposer: account || "",
+        proposer: account!,
         signers: wallet.signers,
         approvals: [
           {
-            signer: account || "",
+            signer: account!,
             timestamp: Date.now(),
           },
         ],
@@ -445,7 +455,9 @@ const EnhancedMPCApprovals: React.FC = () => {
                 {/* Approval Button */}
                 {isUserSigner(tx.signers) && !hasUserApproved(tx.approvals) && (
                   <button
-                    onClick={() => handleApproveTransaction(tx.txHash)}
+                    onClick={() =>
+                      handleApproveTransaction(tx.txHash, tx.walletId)
+                    }
                     disabled={
                       loading || tx.signatureCount >= tx.requiredSignatures
                     }

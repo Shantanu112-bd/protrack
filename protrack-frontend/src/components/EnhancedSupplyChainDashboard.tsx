@@ -69,10 +69,7 @@ interface ProductJourney {
     temperature: number;
     humidity: number;
     vibration: number;
-    gps: {
-      latitude: number;
-      longitude: number;
-    };
+    gps: string;
     dataHash?: string;
     verified?: boolean;
     txHash?: string;
@@ -97,10 +94,7 @@ interface SensorData {
   temperature: number;
   humidity: number;
   vibration: number;
-  gps: {
-    latitude: number;
-    longitude: number;
-  };
+  gps: string;
   dataHash?: string;
   verified?: boolean;
   txHash?: string;
@@ -224,10 +218,10 @@ const EnhancedSupplyChainDashboard: React.FC = () => {
       temperature: 22.5 + Math.random() * 5,
       humidity: 45 + Math.random() * 20,
       vibration: Math.random() * 10,
-      gps: {
-        latitude: 40.7128 + Math.random() * 0.01,
-        longitude: -74.006 + Math.random() * 0.01,
-      },
+      gps: `${(40.7128 + Math.random() * 0.01).toFixed(6)},${(
+        -74.006 +
+        Math.random() * 0.01
+      ).toFixed(6)}`,
       dataHash: `0x${Math.random().toString(16).substr(2, 64)}`,
       verified: Math.random() > 0.2, // 80% verification rate
       txHash: `0x${Math.random().toString(16).substr(2, 64)}`,

@@ -6,35 +6,15 @@ export const CHAIN_ID = 1337; // Local network
 export const RPC_URL = "http://localhost:8545";
 
 // Contract Addresses
-export const PROTRACK_NFT_ADDRESS =
-  "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-export const PROTRACK_SUPPLY_CHAIN_ADDRESS =
-  "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-export const PROTRACK_ORACLE_ADDRESS =
-  "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
-export const PROTRACK_RFID_TOKENIZER_ADDRESS =
-  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-export const PROTRACK_MPC_ADDRESS =
-  "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"; // Update this with your deployed contract address
+export const PROTRACK_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Update with actual deployed address
 
-// Contract ABIs
-export const PROTRACK_NFT_ABI = [
-  /* ... */
-];
-export const PROTRACK_SUPPLY_CHAIN_ABI = [
-  /* ... */
-];
-export const PROTRACK_ORACLE_ABI = [
-  /* ... */
-];
-export const PROTRACK_RFID_TOKENIZER_ABI = [
-  /* ... */
-];
+// Import the unified ProTrack ABI
+import ProTrackABI from "./ProTrack.json";
 
 // Provider and Signer
 export const getProvider = () => {
   // Type assertion to ensure compatibility with ethers v6
-  return new BrowserProvider(window.ethereum);
+  return new BrowserProvider(window.ethereum as ethers.Eip1193Provider);
 };
 
 export const getSigner = async () => {
@@ -44,67 +24,43 @@ export const getSigner = async () => {
 };
 
 // Contract Instances
-export const getProTrackNFTContract = (
+export const getProTrackContract = (
   signerOrProvider: ethers.Signer | ethers.Provider
 ) => {
-  return new Contract(PROTRACK_NFT_ADDRESS, PROTRACK_NFT_ABI, signerOrProvider);
+  return new Contract(PROTRACK_ADDRESS, ProTrackABI.abi, signerOrProvider);
 };
 
-export const getProTrackSupplyChainContract = (
-  signerOrProvider: ethers.Signer | ethers.Provider
-) => {
-  return new Contract(
-    PROTRACK_SUPPLY_CHAIN_ADDRESS,
-    PROTRACK_SUPPLY_CHAIN_ABI,
-    signerOrProvider
-  );
-};
-
-export const getProTrackOracleContract = (
-  signerOrProvider: ethers.Signer | ethers.Provider
-) => {
-  return new Contract(
-    PROTRACK_ORACLE_ADDRESS,
-    PROTRACK_ORACLE_ABI,
-    signerOrProvider
-  );
-};
-
-export const getProTrackRFIDTokenizerContract = (
-  signerOrProvider: ethers.Signer | ethers.Provider
-) => {
-  return new Contract(
-    PROTRACK_RFID_TOKENIZER_ADDRESS,
-    PROTRACK_RFID_TOKENIZER_ABI,
-    signerOrProvider
-  );
-};
-
-// Import ProTrackMPC ABI
-import ProTrackMPCABI from "./ProTrackMPC.json";
-
-export const getProTrackMPCContract = (
-  signerOrProvider: ethers.Signer | ethers.Provider
-) => {
-  return new Contract(
-    PROTRACK_MPC_ADDRESS,
-    ProTrackMPCABI.abi,
-    signerOrProvider
-  );
-};
+// Re-export contract functions for backward compatibility
+export const getProTrackNFTContract = getProTrackContract;
+export const getProTrackSupplyChainContract = getProTrackContract;
+export const getProTrackOracleContract = getProTrackContract;
+export const getProTrackRFIDTokenizerContract = getProTrackContract;
+export const getProTrackMPCContract = getProTrackContract;
 
 // Role Constants
 export const ADMIN_ROLE = ethers.keccak256(ethers.toUtf8Bytes("ADMIN_ROLE"));
 export const MANUFACTURER_ROLE = ethers.keccak256(
   ethers.toUtf8Bytes("MANUFACTURER_ROLE")
 );
-export const SUPPLIER_ROLE = ethers.keccak256(
-  ethers.toUtf8Bytes("SUPPLIER_ROLE")
+export const PACKAGER_ROLE = ethers.keccak256(
+  ethers.toUtf8Bytes("PACKAGER_ROLE")
 );
-export const DISTRIBUTOR_ROLE = ethers.keccak256(
-  ethers.toUtf8Bytes("DISTRIBUTOR_ROLE")
+export const TRANSPORTER_ROLE = ethers.keccak256(
+  ethers.toUtf8Bytes("TRANSPORTER_ROLE")
+);
+export const WHOLESALER_ROLE = ethers.keccak256(
+  ethers.toUtf8Bytes("WHOLESALER_ROLE")
+);
+export const RETAILER_ROLE = ethers.keccak256(
+  ethers.toUtf8Bytes("RETAILER_ROLE")
+);
+export const CUSTOMER_ROLE = ethers.keccak256(
+  ethers.toUtf8Bytes("CUSTOMER_ROLE")
 );
 export const ORACLE_ROLE = ethers.keccak256(ethers.toUtf8Bytes("ORACLE_ROLE"));
+export const INSPECTOR_ROLE = ethers.keccak256(
+  ethers.toUtf8Bytes("INSPECTOR_ROLE")
+);
 
 // Network information
 export const SUPPORTED_NETWORKS = {

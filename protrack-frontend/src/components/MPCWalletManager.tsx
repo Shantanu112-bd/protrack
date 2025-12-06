@@ -1,201 +1,162 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Shield,
-  Users,
-  Key,
-  Lock,
-  Unlock,
-  Plus,
-  Settings,
-  AlertTriangle,
-  Check,
-  Clock,
-  X,
-} from "lucide-react";
-import { useEnhancedWeb3 } from "../contexts/EnhancedWeb3Context";
-import { mpcService } from "../services/mpcService";
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Shield, Users, Key, Lock, Unlock, Plus, Settings, AlertTriangle, Check, Clock, X } from 'lucide-react'
+import { useEnhancedWeb3 } from '../contexts/EnhancedWeb3Context'
 
 interface MPCWallet {
-  walletId: string;
-  threshold: number;
-  totalSigners: number;
-  isActive: boolean;
-  nonce: number;
-  signers: string[];
+  walletId: number
+  threshold: number
+  totalSigners: number
+  isActive: boolean
+  nonce: number
+  signers: string[]
 }
 
 interface PendingTransaction {
-  txId: string;
-  walletId: string;
-  to: string;
-  value: number;
-  operation: string;
-  signatureCount: number;
-  requiredSignatures: number;
-  timestamp: number;
-  status: "pending" | "executed" | "rejected";
+  txHash: string
+  walletId: number
+  to: string
+  value: number
+  operation: string
+  signatureCount: number
+  requiredSignatures: number
+  timestamp: number
+  status: 'pending' | 'executed' | 'rejected'
 }
 
 const MPCWalletManager: React.FC = () => {
-  const { account, isConnected } = useEnhancedWeb3();
+  const {
+    account,
+    isConnected,
+    createMPCWallet,
+    getMPCWalletInfo,
+    proposeTransaction,
+    signMPCTransaction
+  } = useEnhancedWeb3()
 
-  const [wallets, setWallets] = useState<MPCWallet[]>([]);
-  const [pendingTransactions, setPendingTransactions] = useState<
-    PendingTransaction[]
-  >([]);
-  const [showCreateWallet, setShowCreateWallet] = useState(false);
-  const [showProposeTransaction, setShowProposeTransaction] = useState(false);
-  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [wallets, setWallets] = useState<MPCWallet[]>([])
+  const [pendingTransactions, setPendingTransactions] = useState<PendingTransaction[]>([])
+  const [showCreateWallet, setShowCreateWallet] = useState(false)
+  const [showProposeTransaction, setShowProposeTransaction] = useState(false)
+  const [selectedWallet, setSelectedWallet] = useState<number | null>(null)
+  const [loading, setLoading] = useState(false)
 
   // Create wallet form state
-  const [newWalletSigners, setNewWalletSigners] = useState<string[]>([""]);
-  const [newWalletThreshold, setNewWalletThreshold] = useState(2);
+  const [newWalletSigners, setNewWalletSigners] = useState<string[]>([''])
+  const [newWalletThreshold, setNewWalletThreshold] = useState(2)
 
   // Propose transaction form state
-  const [transactionTo, setTransactionTo] = useState("");
-  const [transactionValue, setTransactionValue] = useState("");
-  const [transactionOperation, setTransactionOperation] = useState("TRANSFER");
+  const [transactionTo, setTransactionTo] = useState('')
+  const [transactionValue, setTransactionValue] = useState('')
+  const [transactionOperation, setTransactionOperation] = useState('TRANSFER')
 
   useEffect(() => {
     if (isConnected && account) {
-      loadWallets();
-      loadPendingTransactions();
+      loadWallets()
+      loadPendingTransactions()
     }
-  }, [isConnected, account]);
+  }, [isConnected, account])
 
   const loadWallets = async () => {
-    try {
-      if (!account) return;
-
-      // Get user's wallets from the MPC service
-      const userKeys = await mpcService.getUserKeys(account);
-      const walletPromises = userKeys.map((keyId) => mpcService.getKey(keyId));
-      const walletData = await Promise.all(walletPromises);
-
-      setWallets(walletData);
-    } catch (error) {
-      console.error("Error loading wallets:", error);
-      // Fallback to mock data if there's an error
-      const mockWallets: MPCWallet[] = [
-        {
-          walletId: "key_1",
-          threshold: 2,
-          totalSigners: 3,
-          isActive: true,
-          nonce: 5,
-          signers: [
-            account!,
-            "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
-            "0x8ba1f109551bD432803012645Hac136c0c8416",
-          ],
-        },
-        {
-          walletId: "key_2",
-          threshold: 3,
-          totalSigners: 5,
-          isActive: true,
-          nonce: 12,
-          signers: [
-            account!,
-            "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
-            "0x8ba1f109551bD432803012645Hac136c0c8416",
-            "0x123456789abcdef123456789abcdef123456789a",
-            "0x987654321fedcba987654321fedcba987654321f",
-          ],
-        },
-      ];
-      setWallets(mockWallets);
-    }
-  };
+    // In a real implementation, you'd fetch user's wallets from the contract
+    // For demo purposes, we'll simulate some wallets
+    const mockWallets: MPCWallet[] = [
+      {
+        walletId: 1,
+        threshold: 2,
+        totalSigners: 3,
+        isActive: true,
+        nonce: 5,
+        signers: [account!, '0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8', '0x8ba1f109551bD432803012645Hac136c0c8416']
+      },
+      {
+        walletId: 2,
+        threshold: 3,
+        totalSigners: 5,
+        isActive: true,
+        nonce: 12,
+        signers: [account!, '0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8', '0x8ba1f109551bD432803012645Hac136c0c8416', '0x123456789abcdef123456789abcdef123456789a', '0x987654321fedcba987654321fedcba987654321f']
+      }
+    ]
+    setWallets(mockWallets)
+  }
 
   const loadPendingTransactions = async () => {
-    try {
-      // In a real implementation, we would fetch pending transactions from the contract
-      // For now, we'll use mock data
-      const mockTransactions: PendingTransaction[] = [
-        {
-          txId: "tx_1",
-          walletId: "key_1",
-          to: "0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8",
-          value: 0.5,
-          operation: "MINT",
-          signatureCount: 1,
-          requiredSignatures: 2,
-          timestamp: Date.now() - 3600000,
-          status: "pending",
-        },
-        {
-          txId: "tx_2",
-          walletId: "key_2",
-          to: "0x8ba1f109551bD432803012645Hac136c0c8416",
-          value: 0,
-          operation: "RECALL",
-          signatureCount: 2,
-          requiredSignatures: 3,
-          timestamp: Date.now() - 1800000,
-          status: "pending",
-        },
-      ];
-      setPendingTransactions(mockTransactions);
-    } catch (error) {
-      console.error("Error loading pending transactions:", error);
-    }
-  };
+    // Mock pending transactions
+    const mockTransactions: PendingTransaction[] = [
+      {
+        txHash: '0xabc123...',
+        walletId: 1,
+        to: '0x742d35Cc6634C0532925a3b8D0C9C3c8e1B5C9E8',
+        value: 0.5,
+        operation: 'MINT',
+        signatureCount: 1,
+        requiredSignatures: 2,
+        timestamp: Date.now() - 3600000,
+        status: 'pending'
+      },
+      {
+        txHash: '0xdef456...',
+        walletId: 2,
+        to: '0x8ba1f109551bD432803012645Hac136c0c8416',
+        value: 0,
+        operation: 'RECALL',
+        signatureCount: 2,
+        requiredSignatures: 3,
+        timestamp: Date.now() - 1800000,
+        status: 'pending'
+      }
+    ]
+    setPendingTransactions(mockTransactions)
+  }
 
   const handleCreateWallet = async () => {
-    if (!isConnected || newWalletSigners.filter((s) => s.trim()).length < 2)
-      return;
+    if (!isConnected || newWalletSigners.filter(s => s.trim()).length < 2) return
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const validSigners = newWalletSigners
-        .filter((s) => s.trim())
-        .map((s) => s.trim());
-      const walletId = await mpcService.createWallet(
-        validSigners,
-        newWalletThreshold,
-        "supply_chain"
-      );
-
-      // Get the new wallet info
-      const newWalletInfo = await mpcService.getKey(walletId);
-      setWallets([...wallets, newWalletInfo]);
-
+      const validSigners = newWalletSigners.filter(s => s.trim()).map(s => s.trim())
+      const walletId = await createMPCWallet(validSigners, newWalletThreshold)
+      
+      // Add new wallet to list
+      const newWallet: MPCWallet = {
+        walletId,
+        threshold: newWalletThreshold,
+        totalSigners: validSigners.length,
+        isActive: true,
+        nonce: 0,
+        signers: validSigners
+      }
+      setWallets([...wallets, newWallet])
+      
       // Reset form
-      setNewWalletSigners([""]);
-      setNewWalletThreshold(2);
-      setShowCreateWallet(false);
+      setNewWalletSigners([''])
+      setNewWalletThreshold(2)
+      setShowCreateWallet(false)
     } catch (error) {
-      console.error("Error creating MPC wallet:", error);
+      console.error('Error creating MPC wallet:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleProposeTransaction = async () => {
-    if (!selectedWallet || !transactionTo || !transactionOperation) return;
+    if (!selectedWallet || !transactionTo || !transactionOperation) return
 
-    setLoading(true);
+    setLoading(true)
     try {
-      // Create operation hash (simplified for demo)
-      const operationData = `${transactionTo}${transactionValue}${transactionOperation}`;
-      const operationHash = `0x${Array.from(
-        new TextEncoder().encode(operationData)
-      )
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")}`;
-
-      const txId = await mpcService.initiateTransaction(
+      const txHash = await proposeTransaction(
         selectedWallet,
-        operationHash
-      );
-
+        transactionTo,
+        parseFloat(transactionValue) || 0,
+        '0x', // Empty data for now
+        transactionOperation
+      )
+      
       // Add to pending transactions
-      const wallet = wallets.find((w) => w.walletId === selectedWallet)!;
+      const wallet = wallets.find(w => w.walletId === selectedWallet)!
       const newTransaction: PendingTransaction = {
-        txId,
+        txHash,
         walletId: selectedWallet,
         to: transactionTo,
         value: parseFloat(transactionValue) || 0,
@@ -203,70 +164,69 @@ const MPCWalletManager: React.FC = () => {
         signatureCount: 1, // Proposer auto-signs
         requiredSignatures: wallet.threshold,
         timestamp: Date.now(),
-        status: "pending",
-      };
-      setPendingTransactions([...pendingTransactions, newTransaction]);
-
+        status: 'pending'
+      }
+      setPendingTransactions([...pendingTransactions, newTransaction])
+      
       // Reset form
-      setTransactionTo("");
-      setTransactionValue("");
-      setTransactionOperation("TRANSFER");
-      setShowProposeTransaction(false);
+      setTransactionTo('')
+      setTransactionValue('')
+      setTransactionOperation('TRANSFER')
+      setShowProposeTransaction(false)
     } catch (error) {
-      console.error("Error proposing transaction:", error);
+      console.error('Error proposing transaction:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const handleSignTransaction = async (txId: string, walletId: string) => {
-    setLoading(true);
+  const handleSignTransaction = async (txHash: string, walletId: number) => {
+    setLoading(true)
     try {
-      await mpcService.approveTransaction(txId);
-
+      await signMPCTransaction(walletId, txHash)
+      
       // Update transaction signature count
-      setPendingTransactions((prev) =>
-        prev.map((tx) =>
-          tx.txId === txId
+      setPendingTransactions(prev => 
+        prev.map(tx => 
+          tx.txHash === txHash 
             ? { ...tx, signatureCount: tx.signatureCount + 1 }
             : tx
         )
-      );
+      )
     } catch (error) {
-      console.error("Error signing transaction:", error);
+      console.error('Error signing transaction:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const addSignerField = () => {
-    setNewWalletSigners([...newWalletSigners, ""]);
-  };
+    setNewWalletSigners([...newWalletSigners, ''])
+  }
 
   const updateSignerField = (index: number, value: string) => {
-    const updated = [...newWalletSigners];
-    updated[index] = value;
-    setNewWalletSigners(updated);
-  };
+    const updated = [...newWalletSigners]
+    updated[index] = value
+    setNewWalletSigners(updated)
+  }
 
   const removeSignerField = (index: number) => {
     if (newWalletSigners.length > 1) {
-      setNewWalletSigners(newWalletSigners.filter((_, i) => i !== index));
+      setNewWalletSigners(newWalletSigners.filter((_, i) => i !== index))
     }
-  };
+  }
 
   const getTransactionStatusColor = (tx: PendingTransaction) => {
-    if (tx.signatureCount >= tx.requiredSignatures) return "text-green-400";
-    if (tx.signatureCount > 0) return "text-yellow-400";
-    return "text-gray-400";
-  };
+    if (tx.signatureCount >= tx.requiredSignatures) return 'text-green-400'
+    if (tx.signatureCount > 0) return 'text-yellow-400'
+    return 'text-gray-400'
+  }
 
   const getTransactionStatusIcon = (tx: PendingTransaction) => {
-    if (tx.signatureCount >= tx.requiredSignatures)
-      return <Check className="w-4 h-4" />;
-    if (tx.signatureCount > 0) return <Clock className="w-4 h-4" />;
-    return <AlertTriangle className="w-4 h-4" />;
-  };
+    if (tx.signatureCount >= tx.requiredSignatures) return <Check className="w-4 h-4" />
+    if (tx.signatureCount > 0) return <Clock className="w-4 h-4" />
+    return <AlertTriangle className="w-4 h-4" />
+  }
 
   return (
     <div className="space-y-6">
@@ -277,12 +237,8 @@ const MPCWalletManager: React.FC = () => {
             <Shield className="w-6 h-6 text-blue-400" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-white">
-              MPC Wallet Manager
-            </h2>
-            <p className="text-gray-400">
-              Multi-Party Computation wallets for secure transactions
-            </p>
+            <h2 className="text-xl font-semibold text-white">MPC Wallet Manager</h2>
+            <p className="text-gray-400">Multi-Party Computation wallets for secure transactions</p>
           </div>
         </div>
         <button
@@ -306,27 +262,17 @@ const MPCWalletManager: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <Users className="w-5 h-5 text-blue-400" />
-                <span className="font-medium text-white">
-                  Wallet #{wallet.walletId.substring(0, 8)}
-                </span>
+                <span className="font-medium text-white">Wallet #{wallet.walletId}</span>
               </div>
-              <div
-                className={`px-2 py-1 rounded-full text-xs ${
-                  wallet.isActive
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-red-500/20 text-red-400"
-                }`}
-              >
-                {wallet.isActive ? "Active" : "Inactive"}
+              <div className={`px-2 py-1 rounded-full text-xs ${wallet.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                {wallet.isActive ? 'Active' : 'Inactive'}
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Threshold:</span>
-                <span className="text-white">
-                  {wallet.threshold} of {wallet.totalSigners}
-                </span>
+                <span className="text-white">{wallet.threshold} of {wallet.totalSigners}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Nonce:</span>
@@ -341,8 +287,8 @@ const MPCWalletManager: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-gray-700">
               <button
                 onClick={() => {
-                  setSelectedWallet(wallet.walletId);
-                  setShowProposeTransaction(true);
+                  setSelectedWallet(wallet.walletId)
+                  setShowProposeTransaction(true)
                 }}
                 className="w-full px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors text-sm"
               >
@@ -357,31 +303,25 @@ const MPCWalletManager: React.FC = () => {
       <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6">
         <div className="flex items-center space-x-3 mb-6">
           <Clock className="w-5 h-5 text-yellow-400" />
-          <h3 className="text-lg font-medium text-white">
-            Pending Transactions
-          </h3>
+          <h3 className="text-lg font-medium text-white">Pending Transactions</h3>
         </div>
 
         <div className="space-y-4">
           {pendingTransactions.map((tx) => (
             <motion.div
-              key={tx.txId}
+              key={tx.txHash}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-gray-900/50 border border-gray-600 rounded-lg p-4"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-3">
-                  <div
-                    className={`p-1 rounded ${getTransactionStatusColor(tx)}`}
-                  >
+                  <div className={`p-1 rounded ${getTransactionStatusColor(tx)}`}>
                     {getTransactionStatusIcon(tx)}
                   </div>
                   <div>
                     <div className="text-white font-medium">{tx.operation}</div>
-                    <div className="text-gray-400 text-sm">
-                      Wallet #{tx.walletId.substring(0, 8)}
-                    </div>
+                    <div className="text-gray-400 text-sm">Wallet #{tx.walletId}</div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -397,9 +337,7 @@ const MPCWalletManager: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div>
                   <span className="text-gray-400">To:</span>
-                  <div className="text-white font-mono text-xs">
-                    {tx.to.slice(0, 10)}...{tx.to.slice(-8)}
-                  </div>
+                  <div className="text-white font-mono text-xs">{tx.to.slice(0, 10)}...{tx.to.slice(-8)}</div>
                 </div>
                 <div>
                   <span className="text-gray-400">Value:</span>
@@ -409,11 +347,11 @@ const MPCWalletManager: React.FC = () => {
 
               {tx.signatureCount < tx.requiredSignatures && (
                 <button
-                  onClick={() => handleSignTransaction(tx.txId, tx.walletId)}
+                  onClick={() => handleSignTransaction(tx.txHash, tx.walletId)}
                   disabled={loading}
                   className="w-full px-4 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Signing..." : "Sign Transaction"}
+                  {loading ? 'Signing...' : 'Sign Transaction'}
                 </button>
               )}
             </motion.div>
@@ -443,9 +381,7 @@ const MPCWalletManager: React.FC = () => {
               className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md"
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-medium text-white">
-                  Create MPC Wallet
-                </h3>
+                <h3 className="text-lg font-medium text-white">Create MPC Wallet</h3>
                 <button
                   onClick={() => setShowCreateWallet(false)}
                   className="text-gray-400 hover:text-white"
@@ -460,16 +396,11 @@ const MPCWalletManager: React.FC = () => {
                     Signers
                   </label>
                   {newWalletSigners.map((signer, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center space-x-2 mb-2"
-                    >
+                    <div key={index} className="flex items-center space-x-2 mb-2">
                       <input
                         type="text"
                         value={signer}
-                        onChange={(e) =>
-                          updateSignerField(index, e.target.value)
-                        }
+                        onChange={(e) => updateSignerField(index, e.target.value)}
                         placeholder="0x..."
                         className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
                       />
@@ -499,11 +430,9 @@ const MPCWalletManager: React.FC = () => {
                   <input
                     type="number"
                     value={newWalletThreshold}
-                    onChange={(e) =>
-                      setNewWalletThreshold(parseInt(e.target.value))
-                    }
+                    onChange={(e) => setNewWalletThreshold(parseInt(e.target.value))}
                     min="2"
-                    max={newWalletSigners.filter((s) => s.trim()).length}
+                    max={newWalletSigners.filter(s => s.trim()).length}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
                   />
                   <p className="text-xs text-gray-400 mt-1">
@@ -521,13 +450,10 @@ const MPCWalletManager: React.FC = () => {
                 </button>
                 <button
                   onClick={handleCreateWallet}
-                  disabled={
-                    loading ||
-                    newWalletSigners.filter((s) => s.trim()).length < 2
-                  }
+                  disabled={loading || newWalletSigners.filter(s => s.trim()).length < 2}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Creating..." : "Create Wallet"}
+                  {loading ? 'Creating...' : 'Create Wallet'}
                 </button>
               </div>
             </motion.div>
@@ -551,9 +477,7 @@ const MPCWalletManager: React.FC = () => {
               className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md"
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-medium text-white">
-                  Propose Transaction
-                </h3>
+                <h3 className="text-lg font-medium text-white">Propose Transaction</h3>
                 <button
                   onClick={() => setShowProposeTransaction(false)}
                   className="text-gray-400 hover:text-white"
@@ -619,7 +543,7 @@ const MPCWalletManager: React.FC = () => {
                   disabled={loading || !transactionTo || !transactionOperation}
                   className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {loading ? "Proposing..." : "Propose"}
+                  {loading ? 'Proposing...' : 'Propose'}
                 </button>
               </div>
             </motion.div>
@@ -627,7 +551,7 @@ const MPCWalletManager: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
-  );
-};
+  )
+}
 
-export default MPCWalletManager;
+export default MPCWalletManager

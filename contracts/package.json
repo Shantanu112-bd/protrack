@@ -7,7 +7,8 @@
     "test": "hardhat test",
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.js",
-    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:protrack": "hardhat run scripts/deploy-protrack.js",
+    "deploy:localhost": "hardhat run scripts/deploy-protrack.js --network localhost",
     "node": "hardhat node"
   },
   "dependencies": {

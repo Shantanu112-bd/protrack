@@ -3,108 +3,63 @@
  * Handles IoT sensor data collection, validation, and blockchain submission
  */
 
-import Web3 from "web3";
-import { Contract } from "web3-eth-contract";
-import { IoTOracle_ABI as ProTrackOracleABI } from "../contracts/abis";
-import { ProTrackNFT_ABI as ProTrackSupplyChainABI } from "../contracts/abis";
+import Web3 from 'web3'
+import { Contract } from 'web3-eth-contract'
 
 export interface SensorReading {
-  deviceId: string;
-  tokenId: number;
-  sensorType: "temperature" | "humidity" | "vibration" | "gps" | "tamper";
-  value: number;
-  unit: string;
-  gpsCoordinates?: string;
-  timestamp: number;
-  dataHash: string;
+  deviceId: string
+  tokenId: number
+  sensorType: 'temperature' | 'humidity' | 'vibration' | 'gps' | 'tamper'
+  value: number
+  unit: string
+  gpsCoordinates?: string
+  timestamp: number
+  dataHash: string
 }
 
 export interface GPSLocation {
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  accuracy: number;
-  timestamp: number;
-  address?: string;
+  latitude: number
+  longitude: number
+  altitude?: number
+  accuracy: number
+  timestamp: number
+  address?: string
 }
 
 export interface IoTDevice {
-  deviceId: string;
-  deviceAddress: string;
-  deviceType: string;
-  isActive: boolean;
-  lastUpdate: number;
-  assignedTokenId?: number;
+  deviceId: string
+  deviceAddress: string
+  deviceType: string
+  isActive: boolean
+  lastUpdate: number
+  assignedTokenId?: number
 }
 
 export interface SensorAlert {
-  tokenId: number;
-  alertType: string;
-  message: string;
-  severity: "low" | "medium" | "high" | "critical";
-  timestamp: number;
-  acknowledged: boolean;
-}
-
-interface DeviceMessage {
-  type: string;
-  deviceId: string;
-  timestamp?: number;
-  [key: string]: unknown;
-}
-
-interface SensorReadingData {
-  tokenId: number;
-  sensorType: "temperature" | "humidity" | "vibration" | "gps" | "tamper";
-  value: number;
-  unit: string;
-  gpsCoordinates?: string;
-  timestamp?: number;
-  [key: string]: unknown;
-}
-
-interface GPSUpdateData {
-  tokenId?: number;
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  accuracy: number;
-  address?: string;
-  timestamp?: number;
-  [key: string]: unknown;
-}
-
-interface AlertData {
-  tokenId: number;
-  alertType: string;
-  message: string;
-  severity: "low" | "medium" | "high" | "critical";
-  timestamp?: number;
-  [key: string]: unknown;
-}
-
-interface HeartbeatData {
-  timestamp?: number;
-  [key: string]: unknown;
+  tokenId: number
+  alertType: string
+  message: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  timestamp: number
+  acknowledged: boolean
 }
 
 class IoTOracleService {
-  private web3: Web3 | null = null;
-  private oracleContract: Contract<typeof ProTrackOracleABI> | null = null;
-  private supplyChainContract: Contract<typeof ProTrackSupplyChainABI> | null =
-    null;
-  private deviceConnections: Map<string, WebSocket> = new Map();
-  private sensorDataBuffer: SensorReading[] = [];
-  private alertListeners: ((alert: SensorAlert) => void)[] = [];
+  private web3: Web3 | null = null
+  private oracleContract: Contract | null = null
+  private supplyChainContract: Contract | null = null
+  private deviceConnections: Map<string, WebSocket> = new Map()
+  private sensorDataBuffer: SensorReading[] = []
+  private alertListeners: ((alert: SensorAlert) => void)[] = []
 
   constructor() {
-    this.initializeWeb3();
-    this.startDataProcessing();
+    this.initializeWeb3()
+    this.startDataProcessing()
   }
 
   private async initializeWeb3() {
-    if (typeof window.ethereum !== "undefined") {
-      this.web3 = new Web3(window.ethereum as unknown as Web3);
+    if (typeof window.ethereum !== 'undefined') {
+      this.web3 = new Web3(window.ethereum)
     }
   }
 
@@ -113,22 +68,16 @@ class IoTOracleService {
    */
   public async initializeContracts(
     oracleAddress: string,
-    oracleAbi: typeof ProTrackOracleABI,
+    oracleAbi: any,
     supplyChainAddress: string,
-    supplyChainAbi: typeof ProTrackSupplyChainABI
+    supplyChainAbi: any
   ) {
     if (!this.web3) {
-      throw new Error("Web3 not initialized");
+      throw new Error('Web3 not initialized')
     }
 
-    this.oracleContract = new this.web3.eth.Contract(
-      oracleAbi,
-      oracleAddress
-    ) as Contract<typeof ProTrackOracleABI>;
-    this.supplyChainContract = new this.web3.eth.Contract(
-      supplyChainAbi,
-      supplyChainAddress
-    ) as Contract<typeof ProTrackSupplyChainABI>;
+    this.oracleContract = new this.web3.eth.Contract(oracleAbi, oracleAddress)
+    this.supplyChainContract = new this.web3.eth.Contract(supplyChainAbi, supplyChainAddress)
   }
 
   /**
@@ -141,111 +90,97 @@ class IoTOracleService {
     fromAddress: string
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     if (!this.oracleContract) {
-      throw new Error("Oracle contract not initialized");
+      throw new Error('Oracle contract not initialized')
     }
 
     try {
       const transaction = await this.oracleContract.methods
-        .registerDevice(deviceAddress, deviceId, [0], deviceType, "{}")
-        .send({ from: fromAddress });
+        .registerIoTDevice(deviceAddress, deviceId, deviceType)
+        .send({ from: fromAddress })
 
       return {
         success: true,
-        transactionHash: transaction.transactionHash,
-      };
-    } catch (error: unknown) {
+        transactionHash: transaction.transactionHash
+      }
+    } catch (error: any) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+        error: error.message
+      }
     }
   }
 
   /**
    * Connect to IoT device via WebSocket
    */
-  public async connectToDevice(
-    deviceId: string,
-    websocketUrl: string
-  ): Promise<void> {
+  public async connectToDevice(deviceId: string, websocketUrl: string): Promise<void> {
     if (this.deviceConnections.has(deviceId)) {
-      this.deviceConnections.get(deviceId)?.close();
+      this.deviceConnections.get(deviceId)?.close()
     }
 
-    const ws = new WebSocket(websocketUrl);
+    const ws = new WebSocket(websocketUrl)
 
     ws.onopen = () => {
-      console.log(`Connected to IoT device: ${deviceId}`);
+      console.log(`Connected to IoT device: ${deviceId}`)
       // Send authentication message
-      ws.send(
-        JSON.stringify({
-          type: "auth",
-          deviceId: deviceId,
-          timestamp: Date.now(),
-        })
-      );
-    };
+      ws.send(JSON.stringify({
+        type: 'auth',
+        deviceId: deviceId,
+        timestamp: Date.now()
+      }))
+    }
 
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        this.handleDeviceMessage(deviceId, data);
+        const data = JSON.parse(event.data)
+        this.handleDeviceMessage(deviceId, data)
       } catch (error) {
-        console.error("Failed to parse device message:", error);
+        console.error('Failed to parse device message:', error)
       }
-    };
+    }
 
     ws.onclose = () => {
-      console.log(`Disconnected from IoT device: ${deviceId}`);
-      this.deviceConnections.delete(deviceId);
+      console.log(`Disconnected from IoT device: ${deviceId}`)
+      this.deviceConnections.delete(deviceId)
       // Attempt reconnection after 5 seconds
       setTimeout(() => {
-        this.connectToDevice(deviceId, websocketUrl);
-      }, 5000);
-    };
+        this.connectToDevice(deviceId, websocketUrl)
+      }, 5000)
+    }
 
     ws.onerror = (error) => {
-      console.error(`IoT device connection error (${deviceId}):`, error);
-    };
+      console.error(`IoT device connection error (${deviceId}):`, error)
+    }
 
-    this.deviceConnections.set(deviceId, ws);
+    this.deviceConnections.set(deviceId, ws)
   }
 
   /**
    * Handle incoming message from IoT device
    */
-  private handleDeviceMessage(deviceId: string, data: DeviceMessage) {
+  private handleDeviceMessage(deviceId: string, data: any) {
     switch (data.type) {
-      case "sensor_reading":
-        this.processSensorReading(
-          deviceId,
-          data as unknown as SensorReadingData
-        );
-        break;
-      case "gps_update":
-        this.processGPSUpdate(deviceId, data as unknown as GPSUpdateData);
-        break;
-      case "alert":
-        this.processAlert(deviceId, data as unknown as AlertData);
-        break;
-      case "heartbeat":
-        this.processHeartbeat(deviceId, data as unknown as HeartbeatData);
-        break;
+      case 'sensor_reading':
+        this.processSensorReading(deviceId, data)
+        break
+      case 'gps_update':
+        this.processGPSUpdate(deviceId, data)
+        break
+      case 'alert':
+        this.processAlert(deviceId, data)
+        break
+      case 'heartbeat':
+        this.processHeartbeat(deviceId, data)
+        break
       default:
-        console.warn(
-          `Unknown message type from device ${deviceId}:`,
-          data.type
-        );
+        console.warn(`Unknown message type from device ${deviceId}:`, data.type)
     }
   }
 
   /**
    * Process sensor reading from IoT device
    */
-  private async processSensorReading(
-    deviceId: string,
-    data: SensorReadingData
-  ) {
+  private async processSensorReading(deviceId: string, data: any) {
     const reading: SensorReading = {
       deviceId,
       tokenId: data.tokenId,
@@ -254,39 +189,39 @@ class IoTOracleService {
       unit: data.unit,
       gpsCoordinates: data.gpsCoordinates,
       timestamp: data.timestamp || Date.now(),
-      dataHash: this.generateDataHash(data),
-    };
+      dataHash: this.generateDataHash(data)
+    }
 
     // Validate reading
     if (this.validateSensorReading(reading)) {
-      this.sensorDataBuffer.push(reading);
-
+      this.sensorDataBuffer.push(reading)
+      
       // Check for immediate alerts
-      this.checkForAlerts(reading);
+      this.checkForAlerts(reading)
     } else {
-      console.warn("Invalid sensor reading received:", reading);
+      console.warn('Invalid sensor reading received:', reading)
     }
   }
 
   /**
    * Process GPS update from IoT device
    */
-  private async processGPSUpdate(deviceId: string, data: GPSUpdateData) {
+  private async processGPSUpdate(deviceId: string, data: any) {
     const location: GPSLocation = {
       latitude: data.latitude,
       longitude: data.longitude,
       altitude: data.altitude,
       accuracy: data.accuracy,
       timestamp: data.timestamp || Date.now(),
-      address: data.address,
-    };
+      address: data.address
+    }
 
     // Submit GPS data to oracle contract
     if (this.oracleContract && data.tokenId) {
       try {
-        await this.submitGPSUpdate(data.tokenId, location);
+        await this.submitGPSUpdate(data.tokenId, location)
       } catch (error) {
-        console.error("Failed to submit GPS update:", error);
+        console.error('Failed to submit GPS update:', error)
       }
     }
   }
@@ -294,28 +229,25 @@ class IoTOracleService {
   /**
    * Process alert from IoT device
    */
-  private processAlert(deviceId: string, data: AlertData) {
+  private processAlert(deviceId: string, data: any) {
     const alert: SensorAlert = {
       tokenId: data.tokenId,
       alertType: data.alertType,
       message: data.message,
-      severity: data.severity || "medium",
+      severity: data.severity || 'medium',
       timestamp: data.timestamp || Date.now(),
-      acknowledged: false,
-    };
+      acknowledged: false
+    }
 
     // Notify alert listeners
-    this.alertListeners.forEach((listener) => listener(alert));
+    this.alertListeners.forEach(listener => listener(alert))
   }
 
   /**
    * Process heartbeat from IoT device
    */
-  private processHeartbeat(deviceId: string, data: HeartbeatData) {
-    console.log(
-      `Heartbeat received from device ${deviceId}:`,
-      data.timestamp || Date.now()
-    );
+  private processHeartbeat(deviceId: string, data: any) {
+    console.log(`Heartbeat received from device ${deviceId}:`, data.timestamp)
   }
 
   /**
@@ -326,30 +258,31 @@ class IoTOracleService {
     fromAddress: string
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     if (!this.oracleContract) {
-      throw new Error("Oracle contract not initialized");
+      throw new Error('Oracle contract not initialized')
     }
 
     try {
       const transaction = await this.oracleContract.methods
-        .submitDataPoint(
+        .submitSensorData(
           reading.deviceId,
-          this.getSensorTypeValue(reading.sensorType),
+          reading.tokenId,
+          reading.sensorType,
           reading.value,
           reading.unit,
-          reading.gpsCoordinates || "",
-          "{}"
+          reading.gpsCoordinates || '',
+          reading.dataHash
         )
-        .send({ from: fromAddress });
+        .send({ from: fromAddress })
 
       return {
         success: true,
-        transactionHash: transaction.transactionHash,
-      };
-    } catch (error: unknown) {
+        transactionHash: transaction.transactionHash
+      }
+    } catch (error: any) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+        error: error.message
+      }
     }
   }
 
@@ -361,33 +294,32 @@ class IoTOracleService {
     location: GPSLocation
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     if (!this.oracleContract || !this.web3) {
-      throw new Error("Oracle contract not initialized");
+      throw new Error('Oracle contract not initialized')
     }
 
     try {
-      const accounts = await this.web3.eth.getAccounts();
-      const fromAddress = accounts[0];
+      const accounts = await this.web3.eth.getAccounts()
+      const fromAddress = accounts[0]
 
       const transaction = await this.oracleContract.methods
-        .submitDataPoint(
-          `gps_${tokenId}`,
-          5, // GPS sensor type
-          Math.round(location.latitude * 1000000), // Convert to integer
-          "lat",
-          `${location.latitude},${location.longitude}`,
-          "{}"
+        .updateGPSLocation(
+          tokenId,
+          location.latitude.toString(),
+          location.longitude.toString(),
+          location.address || '',
+          location.accuracy
         )
-        .send({ from: fromAddress });
+        .send({ from: fromAddress })
 
       return {
         success: true,
-        transactionHash: transaction.transactionHash,
-      };
-    } catch (error: unknown) {
+        transactionHash: transaction.transactionHash
+      }
+    } catch (error: any) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+        error: error.message
+      }
     }
   }
 
@@ -399,39 +331,39 @@ class IoTOracleService {
     fromAddress: string
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     if (!this.oracleContract) {
-      throw new Error("Oracle contract not initialized");
+      throw new Error('Oracle contract not initialized')
     }
 
-    const deviceIds = readings.map((r) => r.deviceId);
-    const sensorTypes = readings.map((r) =>
-      this.getSensorTypeValue(r.sensorType)
-    );
-    const values = readings.map((r) => r.value);
-    const units = readings.map((r) => r.unit);
-    const gpsCoordinates = readings.map((r) => r.gpsCoordinates || "");
-    const dataHashes = readings.map((r) => r.dataHash);
+    const deviceIds = readings.map(r => r.deviceId)
+    const tokenIds = readings.map(r => r.tokenId)
+    const sensorTypes = readings.map(r => r.sensorType)
+    const values = readings.map(r => r.value)
+    const units = readings.map(r => r.unit)
+    const gpsCoordinates = readings.map(r => r.gpsCoordinates || '')
+    const dataHashes = readings.map(r => r.dataHash)
 
     try {
       const transaction = await this.oracleContract.methods
         .batchSubmitSensorData(
           deviceIds,
+          tokenIds,
           sensorTypes,
           values,
           units,
           gpsCoordinates,
           dataHashes
         )
-        .send({ from: fromAddress });
+        .send({ from: fromAddress })
 
       return {
         success: true,
-        transactionHash: transaction.transactionHash,
-      };
-    } catch (error: unknown) {
+        transactionHash: transaction.transactionHash
+      }
+    } catch (error: any) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+        error: error.message
+      }
     }
   }
 
@@ -440,18 +372,27 @@ class IoTOracleService {
    */
   public async getTokenSensorData(tokenId: number): Promise<SensorReading[]> {
     if (!this.oracleContract) {
-      throw new Error("Oracle contract not initialized");
+      throw new Error('Oracle contract not initialized')
     }
 
     try {
-      // In a real implementation, we would call the contract method
-      // For now, we'll return the buffered data
-      return this.sensorDataBuffer.filter(
-        (reading) => reading.tokenId === tokenId
-      );
-    } catch (error: unknown) {
-      console.error("Failed to get sensor data:", error);
-      return [];
+      const data = await this.oracleContract.methods
+        .getTokenSensorData(tokenId)
+        .call()
+
+      return data.map((reading: any) => ({
+        deviceId: reading.deviceId,
+        tokenId: parseInt(reading.tokenId),
+        sensorType: reading.sensorType,
+        value: parseInt(reading.value),
+        unit: reading.unit,
+        gpsCoordinates: reading.gpsCoordinates,
+        timestamp: parseInt(reading.timestamp),
+        dataHash: reading.dataHash
+      }))
+    } catch (error) {
+      console.error('Failed to get sensor data:', error)
+      return []
     }
   }
 
@@ -460,17 +401,24 @@ class IoTOracleService {
    */
   public async getTokenGPSHistory(tokenId: number): Promise<GPSLocation[]> {
     if (!this.oracleContract) {
-      throw new Error("Oracle contract not initialized");
+      throw new Error('Oracle contract not initialized')
     }
 
     try {
-      // In a real implementation, we would call the contract method
-      // For now, we'll return mock data based on the tokenId
-      console.log(`Getting GPS history for token ${tokenId}`);
-      return [];
-    } catch (error: unknown) {
-      console.error("Failed to get GPS history:", error);
-      return [];
+      const history = await this.oracleContract.methods
+        .getTokenGPSHistory(tokenId)
+        .call()
+
+      return history.map((location: any) => ({
+        latitude: parseFloat(location.latitude),
+        longitude: parseFloat(location.longitude),
+        accuracy: parseInt(location.accuracy),
+        timestamp: parseInt(location.timestamp),
+        address: location.address_location
+      }))
+    } catch (error) {
+      console.error('Failed to get GPS history:', error)
+      return []
     }
   }
 
@@ -479,8 +427,8 @@ class IoTOracleService {
    */
   private startDataProcessing() {
     setInterval(() => {
-      this.processSensorDataBuffer();
-    }, 10000); // Process every 10 seconds
+      this.processSensorDataBuffer()
+    }, 10000) // Process every 10 seconds
   }
 
   /**
@@ -488,21 +436,21 @@ class IoTOracleService {
    */
   private async processSensorDataBuffer() {
     if (this.sensorDataBuffer.length === 0) {
-      return;
+      return
     }
 
-    const batch = this.sensorDataBuffer.splice(0, 10); // Process up to 10 readings at once
+    const batch = this.sensorDataBuffer.splice(0, 10) // Process up to 10 readings at once
 
     if (this.web3) {
       try {
-        const accounts = await this.web3.eth.getAccounts();
+        const accounts = await this.web3.eth.getAccounts()
         if (accounts.length > 0) {
-          await this.batchSubmitSensorData(batch, accounts[0]);
+          await this.batchSubmitSensorData(batch, accounts[0])
         }
       } catch (error) {
-        console.error("Failed to process sensor data batch:", error);
+        console.error('Failed to process sensor data batch:', error)
         // Re-add failed batch to buffer
-        this.sensorDataBuffer.unshift(...batch);
+        this.sensorDataBuffer.unshift(...batch)
       }
     }
   }
@@ -513,94 +461,82 @@ class IoTOracleService {
   private validateSensorReading(reading: SensorReading): boolean {
     // Basic validation
     if (!reading.deviceId || !reading.sensorType || reading.tokenId <= 0) {
-      return false;
+      return false
     }
 
     // Validate sensor value ranges
     switch (reading.sensorType) {
-      case "temperature":
-        return reading.value >= -50 && reading.value <= 100;
-      case "humidity":
-        return reading.value >= 0 && reading.value <= 100;
-      case "vibration":
-        return reading.value >= 0 && reading.value <= 1000;
-      case "tamper":
-        return reading.value >= 0 && reading.value <= 1;
+      case 'temperature':
+        return reading.value >= -50 && reading.value <= 100
+      case 'humidity':
+        return reading.value >= 0 && reading.value <= 100
+      case 'vibration':
+        return reading.value >= 0 && reading.value <= 1000
+      case 'tamper':
+        return reading.value >= 0 && reading.value <= 1
       default:
-        return true;
+        return true
     }
   }
 
   /**
    * Generate data hash for integrity verification
    */
-  private generateDataHash(data: Record<string, unknown>): string {
+  private generateDataHash(data: any): string {
     if (!this.web3) {
-      return `0x${Math.random().toString(16).substring(2, 66)}`;
+      return `0x${Math.random().toString(16).substring(2, 66)}`
     }
 
-    const dataString = JSON.stringify(data);
-    return this.web3.utils.keccak256(dataString);
-  }
+    const dataString = JSON.stringify({
+      deviceId: data.deviceId,
+      tokenId: data.tokenId,
+      sensorType: data.sensorType,
+      value: data.value,
+      unit: data.unit,
+      gpsCoordinates: data.gpsCoordinates,
+      timestamp: data.timestamp
+    })
 
-  /**
-   * Convert sensor type to numeric value
-   */
-  private getSensorTypeValue(sensorType: SensorReading["sensorType"]): number {
-    switch (sensorType) {
-      case "temperature":
-        return 0;
-      case "humidity":
-        return 1;
-      case "vibration":
-        return 3;
-      case "gps":
-        return 5;
-      case "tamper":
-        return 6;
-      default:
-        return 7;
-    }
+    return this.web3.utils.keccak256(dataString)
   }
 
   /**
    * Check for alerts based on sensor readings
    */
   private checkForAlerts(reading: SensorReading) {
-    let alertType: string | null = null;
-    let message: string | null = null;
-    let severity: "low" | "medium" | "high" | "critical" = "medium";
+    let alertType: string | null = null
+    let message: string | null = null
+    let severity: 'low' | 'medium' | 'high' | 'critical' = 'medium'
 
     switch (reading.sensorType) {
-      case "temperature":
+      case 'temperature':
         if (reading.value < -20 || reading.value > 40) {
-          alertType = "TEMPERATURE_ALERT";
-          message = `Temperature ${reading.value}°C is outside safe range (-20°C to 40°C)`;
-          severity =
-            reading.value < -30 || reading.value > 50 ? "critical" : "high";
+          alertType = 'TEMPERATURE_ALERT'
+          message = `Temperature ${reading.value}°C is outside safe range (-20°C to 40°C)`
+          severity = reading.value < -30 || reading.value > 50 ? 'critical' : 'high'
         }
-        break;
-      case "humidity":
+        break
+      case 'humidity':
         if (reading.value < 0 || reading.value > 95) {
-          alertType = "HUMIDITY_ALERT";
-          message = `Humidity ${reading.value}% is outside safe range (0% to 95%)`;
-          severity = "medium";
+          alertType = 'HUMIDITY_ALERT'
+          message = `Humidity ${reading.value}% is outside safe range (0% to 95%)`
+          severity = 'medium'
         }
-        break;
-      case "vibration":
+        break
+      case 'vibration':
         if (reading.value > 100) {
-          alertType = "VIBRATION_ALERT";
-          message = `Excessive vibration detected: ${reading.value}`;
-          severity = reading.value > 200 ? "critical" : "high";
+          alertType = 'VIBRATION_ALERT'
+          message = `Excessive vibration detected: ${reading.value}`
+          severity = reading.value > 200 ? 'critical' : 'high'
         }
-        break;
-      case "tamper":
+        break
+      case 'tamper':
         if (reading.value > 0) {
-          alertType = "TAMPER_ALERT";
-          message = "Product tampering detected";
-          severity = "critical";
+          alertType = 'TAMPER_ALERT'
+          message = 'Product tampering detected'
+          severity = 'critical'
         }
-        break;
+        break
     }
 
     if (alertType && message) {
@@ -610,10 +546,10 @@ class IoTOracleService {
         message,
         severity,
         timestamp: reading.timestamp,
-        acknowledged: false,
-      };
+        acknowledged: false
+      }
 
-      this.alertListeners.forEach((listener) => listener(alert));
+      this.alertListeners.forEach(listener => listener(alert))
     }
   }
 
@@ -621,16 +557,16 @@ class IoTOracleService {
    * Add alert listener
    */
   public addAlertListener(listener: (alert: SensorAlert) => void) {
-    this.alertListeners.push(listener);
+    this.alertListeners.push(listener)
   }
 
   /**
    * Remove alert listener
    */
   public removeAlertListener(listener: (alert: SensorAlert) => void) {
-    const index = this.alertListeners.indexOf(listener);
+    const index = this.alertListeners.indexOf(listener)
     if (index > -1) {
-      this.alertListeners.splice(index, 1);
+      this.alertListeners.splice(index, 1)
     }
   }
 
@@ -638,48 +574,51 @@ class IoTOracleService {
    * Simulate IoT device data for testing
    */
   public simulateDeviceData(deviceId: string, tokenId: number) {
-    const sensorTypes: ("temperature" | "humidity" | "vibration")[] = [
-      "temperature",
-      "humidity",
-      "vibration",
-    ];
-
+    const sensorTypes: ('temperature' | 'humidity' | 'vibration')[] = ['temperature', 'humidity', 'vibration']
+    
     setInterval(() => {
-      const sensorType =
-        sensorTypes[Math.floor(Math.random() * sensorTypes.length)];
-      let value: number;
-      let unit: string;
+      const sensorType = sensorTypes[Math.floor(Math.random() * sensorTypes.length)]
+      let value: number
+      let unit: string
 
       switch (sensorType) {
-        case "temperature":
-          value = Math.round((Math.random() * 60 - 20) * 10) / 10; // -20 to 40°C
-          unit = "°C";
-          break;
-        case "humidity":
-          value = Math.round(Math.random() * 100); // 0 to 100%
-          unit = "%";
-          break;
-        case "vibration":
-          value = Math.round(Math.random() * 150); // 0 to 150
-          unit = "units";
-          break;
+        case 'temperature':
+          value = Math.round((Math.random() * 60 - 20) * 10) / 10 // -20 to 40°C
+          unit = '°C'
+          break
+        case 'humidity':
+          value = Math.round(Math.random() * 100) // 0 to 100%
+          unit = '%'
+          break
+        case 'vibration':
+          value = Math.round(Math.random() * 150) // 0 to 150
+          unit = 'units'
+          break
       }
 
-      const reading: SensorReadingData = {
+      const reading: SensorReading = {
+        deviceId,
         tokenId,
         sensorType,
         value,
         unit,
-        gpsCoordinates: `${(Math.random() * 180 - 90).toFixed(6)},${(
-          Math.random() * 360 -
-          180
-        ).toFixed(6)}`,
+        gpsCoordinates: `${(Math.random() * 180 - 90).toFixed(6)},${(Math.random() * 360 - 180).toFixed(6)}`,
         timestamp: Date.now(),
-        type: "sensor_reading",
-      };
+        dataHash: this.generateDataHash({
+          deviceId,
+          tokenId,
+          sensorType,
+          value,
+          unit,
+          timestamp: Date.now()
+        })
+      }
 
-      this.processSensorReading(deviceId, reading);
-    }, 5000); // Every 5 seconds
+      this.processSensorReading(deviceId, {
+        type: 'sensor_reading',
+        ...reading
+      })
+    }, 5000) // Every 5 seconds
   }
 
   /**
@@ -687,11 +626,11 @@ class IoTOracleService {
    */
   public disconnectAllDevices() {
     this.deviceConnections.forEach((ws, deviceId) => {
-      ws.close();
-      console.log(`Disconnected from device: ${deviceId}`);
-    });
-    this.deviceConnections.clear();
+      ws.close()
+      console.log(`Disconnected from device: ${deviceId}`)
+    })
+    this.deviceConnections.clear()
   }
 }
 
-export default new IoTOracleService();
+export default new IoTOracleService()
