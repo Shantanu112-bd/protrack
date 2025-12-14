@@ -1,168 +1,55 @@
-import React, { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { Suspense, lazy } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Header from "./components/Header";
-import Dashboard from "./components/Dashboard";
-import WalletConnect from "./components/WalletConnect";
-import HealthCheck from "./components/HealthCheck";
+import { LoadingSpinner } from "./components/ui/loading-spinner";
+import NetworkTest from "./components/NetworkTest";
+import SensorDashboard from "./components/SensorDashboard";
 import "./App.css";
 
-// Lazy load components for better performance
-const LazyProducts = lazy(() => import("./components/Products"));
-const LazyShipments = lazy(() => import("./components/Shipments"));
-const LazyMintProduct = lazy(() => import("./components/MintProduct"));
-const LazyScanRFID = lazy(() => import("./components/ScanRFID"));
-const LazyIoTMonitor = lazy(() => import("./components/IoTMonitor"));
-const LazySupplyChainAnalytics = lazy(
-  () => import("./components/SupplyChainAnalytics")
-);
-const LazySupplyChainOptimization = lazy(
-  () => import("./components/SupplyChainOptimization")
-);
-const LazyQualityAssurance = lazy(
-  () => import("./components/QualityAssurance")
-);
-const LazyComplianceManagement = lazy(
-  () => import("./components/ComplianceManagement")
-);
+// Lazy load components that actually exist
+const Dashboard = lazy(() => import("./components/Dashboard"));
+const Products = lazy(() => import("./components/Products"));
+const Shipments = lazy(() => import("./components/Shipments"));
+const NFTMinting = lazy(() => import("./components/NFTProductCreation"));
+const Scan = lazy(() => import("./components/ScanRFID"));
+const IoTMonitoring = lazy(() => import("./components/IoTDashboard"));
+const Analytics = lazy(() => import("./components/SupplyChainAnalytics"));
+const Optimization = lazy(() => import("./components/SupplyChainOptimization"));
+const QualityControl = lazy(() => import("./components/QualityAssurance"));
+const Compliance = lazy(() => import("./components/ComplianceManagement"));
+const Notifications = lazy(() => import("./components/NotificationCenter"));
+const UserProfile = lazy(() => import("./components/WalletConnection"));
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full h-full">
-      <Header />
-      <main className="w-full h-full pt-20">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route
-            path="/dashboard/products"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyProducts />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/shipments"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyShipments />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/mint"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyMintProduct />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/scan"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyScanRFID />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/iot"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyIoTMonitor />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/analytics"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazySupplyChainAnalytics />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/optimization"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazySupplyChainOptimization />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/quality"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyQualityAssurance />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/dashboard/compliance"
-            element={
-              <Suspense
-                fallback={
-                  <div className="flex items-center justify-center h-full">
-                    Loading...
-                  </div>
-                }
-              >
-                <LazyComplianceManagement />
-              </Suspense>
-            }
-          />
-          <Route path="/connect" element={<WalletConnect />} />
-          <Route path="/health" element={<HealthCheck />} />
-        </Routes>
-      </main>
+    <div className="flex h-screen bg-gray-100">
+      {/* <Sidebar /> - Removed as it doesn't exist */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto p-4 bg-gray-100">
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="products" element={<Products />} />
+              <Route path="shipments" element={<Shipments />} />
+              <Route path="mint" element={<NFTMinting isDark={false} />} />
+              <Route path="scan" element={<Scan />} />
+              <Route path="iot" element={<IoTMonitoring />} />
+              <Route path="sensors" element={<SensorDashboard />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="optimization" element={<Optimization />} />
+              <Route path="quality" element={<QualityControl />} />
+              <Route path="compliance" element={<Compliance />} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="profile" element={<UserProfile />} />
+              <Route path="network-test" element={<NetworkTest />} />
+              <Route path="*" element={<Navigate to="dashboard" replace />} />
+            </Routes>
+          </Suspense>
+        </main>
+        {/* <Footer /> - Removed as it doesn't exist */}
+      </div>
     </div>
   );
 }

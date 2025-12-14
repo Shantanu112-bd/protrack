@@ -5,38 +5,16 @@
     "rpcUrl": "http://127.0.0.1:8545"
   },
   "contracts": {
-    "ProTrackSupplyChain": {
-      "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+    "ProTrack": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
       "deployBlock": 1
-    },
-    "ProTrackOracle": {
-      "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
-      "deployBlock": 2
-    },
-    "ProTrackMPCWallet": {
-      "address": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49",
-      "deployBlock": 3
-    },
-    "ProTrackRFIDTokenizer": {
-      "address": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
-      "deployBlock": 4
-    },
-    "ProTrackAdvancedIoT": {
-      "address": "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf",
-      "deployBlock": 5
-    },
-    "ProTrackNFT": {
-      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
-      "deployBlock": 6
     }
   },
   "demo": {
-    "mpcWalletId": 0,
-    "signers": [
-      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-      "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-    ],
+    "testTokenId": 1,
+    "testRfid": "RFID-TEST-001",
+    "testBarcode": "BARCODE-TEST-12345",
+    "testProductName": "Test Organic Coffee Beans",
     "devices": ["TEMP_SENSOR_001", "HUM_SENSOR_002", "GPS_TRACKER_003"]
   }
 }

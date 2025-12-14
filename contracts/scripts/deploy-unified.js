@@ -10,8 +10,9 @@ async function main() {
   // Deploy the unified ProTrack contract
   const ProTrack = await hre.ethers.getContractFactory("ProTrack");
   const proTrack = await ProTrack.deploy();
-  await proTrack.deployed();
-  console.log("Unified ProTrack deployed to:", proTrack.address);
+  await proTrack.waitForDeployment();
+  const proTrackAddress = await proTrack.getAddress();
+  console.log("Unified ProTrack deployed to:", proTrackAddress);
 
   // Save deployment information
   const fs = require("fs");
@@ -23,7 +24,7 @@ async function main() {
     },
     contracts: {
       ProTrack: {
-        address: proTrack.address,
+        address: proTrackAddress,
         deployBlock: 1,
       },
     },
@@ -46,32 +47,30 @@ async function main() {
   const [deployer] = await hre.ethers.getSigners();
 
   // Define role constants (must match the contract)
-  const ADMIN_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("ADMIN_ROLE")
+  const ADMIN_ROLE = hre.ethers.keccak256(hre.ethers.toUtf8Bytes("ADMIN_ROLE"));
+  const MANUFACTURER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("MANUFACTURER_ROLE")
   );
-  const MANUFACTURER_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("MANUFACTURER_ROLE")
+  const PACKAGER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("PACKAGER_ROLE")
   );
-  const PACKAGER_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("PACKAGER_ROLE")
+  const TRANSPORTER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("TRANSPORTER_ROLE")
   );
-  const TRANSPORTER_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("TRANSPORTER_ROLE")
+  const WHOLESALER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("WHOLESALER_ROLE")
   );
-  const WHOLESALER_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("WHOLESALER_ROLE")
+  const RETAILER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("RETAILER_ROLE")
   );
-  const RETAILER_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("RETAILER_ROLE")
+  const CUSTOMER_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("CUSTOMER_ROLE")
   );
-  const CUSTOMER_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("CUSTOMER_ROLE")
+  const ORACLE_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("ORACLE_ROLE")
   );
-  const ORACLE_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("ORACLE_ROLE")
-  );
-  const INSPECTOR_ROLE = hre.ethers.utils.keccak256(
-    hre.ethers.utils.toUtf8Bytes("INSPECTOR_ROLE")
+  const INSPECTOR_ROLE = hre.ethers.keccak256(
+    hre.ethers.toUtf8Bytes("INSPECTOR_ROLE")
   );
 
   // Grant all roles to deployer for testing

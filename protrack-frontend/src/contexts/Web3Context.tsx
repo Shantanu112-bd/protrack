@@ -1,21 +1,46 @@
 import React, { useEffect, useState } from "react";
 import { Web3ReactProvider, useWeb3React } from "@web3-react/core";
-import { CHAIN_ID, RPC_URL } from "../contracts/contractConfig";
+import { CHAIN_ID } from "../contracts/contractConfig";
 import { metaMask, metaMaskHooks } from "./connectors";
 import { Web3Context, Web3ContextType } from "./web3ContextTypes";
+import { switchNetwork } from "../utils/switchNetwork";
 
 export const Web3ContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { account, chainId, isActive } = useWeb3React();
+  const { account, chainId, isActive, provider } = useWeb3React();
   const [balance, setBalance] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Get account balance
+  const fetchBalance = async () => {
+    if (account && provider) {
+      try {
+        const balance = await provider.getBalance(account);
+        setBalance(balance.toString());
+      } catch (err) {
+        console.error("Failed to get balance:", err);
+        setBalance(null);
+      }
+    }
+  };
+
+  // Update balance when account or provider changes
+  useEffect(() => {
+    fetchBalance();
+  }, [account, provider]);
 
   // Connect wallet
   const connectWallet = async () => {
     try {
       setError(null);
+
+      // First activate MetaMask
       await metaMask.activate();
+
+      // Then switch to the correct network
+      await switchNetwork(CHAIN_ID);
+
       localStorage.setItem("isWalletConnected", "true");
     } catch (error: unknown) {
       console.error("Failed to connect to wallet:", error);
@@ -28,10 +53,8 @@ export const Web3ContextProvider: React.FC<{ children: React.ReactNode }> = ({
   // Disconnect wallet
   const disconnectWallet = async () => {
     try {
-      await metaMask.deactivate();
+      metaMask.deactivate();
       localStorage.removeItem("isWalletConnected");
-      setBalance(null);
-      setError(null);
     } catch (error: unknown) {
       console.error("Failed to disconnect wallet:", error);
       setError(
@@ -40,106 +63,41 @@ export const Web3ContextProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Check wallet connection on mount
+  useEffect(() => {
+    const isWalletConnected = localStorage.getItem("isWalletConnected");
+    if (isWalletConnected === "true") {
+      connectWallet();
+    }
+  }, []);
+
   // Get account balance
   const getBalance = async () => {
-    if (
-      account &&
-      isActive &&
-      typeof window !== "undefined" &&
-      window.ethereum
-    ) {
+    if (account && provider) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ethereum = window.ethereum as any;
-        if (!ethereum) return;
-
-        const balance = await ethereum.request({
-          method: "eth_getBalance",
-          params: [account, "latest"],
-        });
-        // Convert from wei to ETH
-        const balanceStr = String(balance);
-        const balanceInEth = parseFloat(balanceStr) / 1e18;
-        setBalance(balanceInEth.toFixed(4) + " ETH");
-      } catch (error) {
-        console.error("Failed to fetch balance:", error);
+        const balance = await provider.getBalance(account);
+        setBalance(balance.toString());
+      } catch (err) {
+        console.error("Failed to get balance:", err);
+        setBalance(null);
       }
     }
   };
-
-  // Auto connect if previously connected
-  useEffect(() => {
-    const connectWalletOnPageLoad = async () => {
-      if (localStorage.getItem("isWalletConnected") === "true") {
-        try {
-          await metaMask.connectEagerly();
-        } catch (error) {
-          console.error("Failed to auto-connect wallet:", error);
-        }
-      }
-    };
-    connectWalletOnPageLoad();
-  }, []);
-
-  // Get balance when account changes
-  useEffect(() => {
-    if (account && isActive) {
-      getBalance();
-    } else {
-      setBalance(null);
-    }
-  }, [account, isActive]);
 
   // Switch network if wrong network
   useEffect(() => {
     if (chainId && chainId !== CHAIN_ID) {
       (async () => {
         try {
-          if (typeof window !== "undefined" && window.ethereum) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const ethereum = window.ethereum as any;
-            if (!ethereum) return;
-
-            await ethereum.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: `0x${CHAIN_ID.toString(16)}` }],
-            });
-          }
+          // Use our enhanced network switching utility
+          await switchNetwork(CHAIN_ID);
         } catch (switchError: unknown) {
-          // This error code indicates that the chain has not been added to MetaMask
-          if (
-            switchError instanceof Error &&
-            "code" in switchError &&
-            (switchError as { code?: number }).code === 4902
-          ) {
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const ethereum = window.ethereum as any;
-              if (!ethereum) return;
-
-              await ethereum.request({
-                method: "wallet_addEthereumChain",
-                params: [
-                  {
-                    chainId: `0x${CHAIN_ID.toString(16)}`,
-                    chainName: "Hardhat Local",
-                    rpcUrls: [RPC_URL],
-                    nativeCurrency: {
-                      name: "ETH",
-                      symbol: "ETH",
-                      decimals: 18,
-                    },
-                  },
-                ],
-              });
-            } catch (addError) {
-              console.error("Failed to add network:", addError);
-              setError("Please manually add the network to your wallet");
-            }
-          } else {
-            console.error("Failed to switch network:", switchError);
-            setError("Please switch to the correct network in your wallet");
-          }
+          console.error("Failed to switch network:", switchError);
+          setError(
+            switchError instanceof Error
+              ? switchError.message
+              : "Please switch to the correct network in your wallet"
+          );
         }
       })();
     }

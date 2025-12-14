@@ -1,198 +1,272 @@
 import React, { useState } from "react";
 import { useWeb3 } from "../contexts/web3ContextTypes";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   QrCode,
-  Package,
-  MapPin,
-  Calendar,
-  CheckCircle,
-  AlertTriangle,
-  Search,
   Scan,
+  Rss,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Camera,
+  Wifi,
   Shield,
-  BarChart3,
-  Download,
-  RefreshCw,
 } from "lucide-react";
-import { getProTrackContract, getProvider } from "../contracts/contractConfig";
 
 // Define types
-interface ProductInfo {
+interface ScannedProduct {
   id: number;
-  rfid: string;
-  barcode: string;
-  name: string;
-  batch: string;
+  productId: string;
+  productName: string;
+  batchId: string;
+  rfidHash: string;
   status: string;
   owner: string;
+  lastScan: string;
   location: string;
-  lastUpdate: string;
-  expiryDate: string;
-  manufacturer: string;
+  verificationResult: string;
+}
+
+interface ScanEvent {
+  id: number;
+  timestamp: string;
+  productId: string;
+  scannerId: string;
+  location: string;
+  action: string;
+  result: string;
 }
 
 const ScanRFID = () => {
   const { isActive } = useWeb3();
-  const [rfidInput, setRfidInput] = useState("");
-  const [scannedProduct, setScannedProduct] = useState<ProductInfo | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [scanHistory, setScanHistory] = useState<ProductInfo[]>([]);
-  const [userRole, setUserRole] = useState("admin"); // Add user role state
+  const [scanMethod, setScanMethod] = useState("manual");
+  const [manualInput, setManualInput] = useState("");
+  const [scannedProducts] = useState<ScannedProduct[]>([
+    {
+      id: 1,
+      productId: "PROD-101",
+      productName: "Organic Coffee Beans",
+      batchId: "BATCH-2023-001",
+      rfidHash: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+      status: "verified",
+      owner: "0x742d...a3b8",
+      lastScan: "2023-12-01 14:30:00",
+      location: "Warehouse A, New York",
+      verificationResult: "authentic",
+    },
+    {
+      id: 2,
+      productId: "PROD-102",
+      productName: "Premium Chocolate",
+      batchId: "BATCH-2023-002",
+      rfidHash: "0x35Cc6634C0532925a3b8D4C0532925a3b8D4742d",
+      status: "verified",
+      owner: "0x35Cc...5329",
+      lastScan: "2023-12-02 09:15:00",
+      location: "Store B, Los Angeles",
+      verificationResult: "authentic",
+    },
+  ]);
+  const [scanHistory, setScanHistory] = useState<ScanEvent[]>([
+    {
+      id: 1,
+      timestamp: "2023-12-01 14:30:00",
+      productId: "PROD-101",
+      scannerId: "SCANNER-001",
+      location: "Warehouse A, New York",
+      action: "receive",
+      result: "success",
+    },
+    {
+      id: 2,
+      timestamp: "2023-12-02 09:15:00",
+      productId: "PROD-102",
+      scannerId: "SCANNER-002",
+      location: "Store B, Los Angeles",
+      action: "quality_check",
+      result: "success",
+    },
+  ]);
 
-  // Scan RFID
-  const scanRFID = async () => {
-    if (!rfidInput) {
-      setError("Please enter an RFID or barcode");
+  // Handle manual scan
+  const handleManualScan = () => {
+    if (!manualInput.trim()) {
+      alert("Please enter a product ID, RFID hash, or barcode");
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
+    // In a real app, this would interact with the blockchain and database
+    console.log("Scanning product:", manualInput);
+    alert(`Product scanned: ${manualInput}`);
 
-    try {
-      // Get provider and contract instance
-      const provider = getProvider();
-      const contract = getProTrackContract(provider);
+    // Add to scan history
+    const newScan: ScanEvent = {
+      id: scanHistory.length + 1,
+      timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
+      productId: manualInput,
+      scannerId: "MANUAL-INPUT",
+      location: "Current Location",
+      action: "manual_scan",
+      result: "success",
+    };
 
-      // First, try to get token ID by RFID
-      let tokenId = await contract.rfidToTokenId(rfidInput);
-
-      // If not found by RFID, try by barcode
-      if (tokenId.toString() === "0") {
-        tokenId = await contract.barcodeToTokenId(rfidInput);
-      }
-
-      // If still not found, show error
-      if (tokenId.toString() === "0") {
-        setError("Product not found with this RFID or barcode");
-        return;
-      }
-
-      // Get product data
-      const productData = await contract.getProduct(tokenId);
-
-      // Convert contract data to UI format
-      const product: ProductInfo = {
-        id: Number(tokenId),
-        rfid: productData.rfidHash,
-        barcode: productData.barcode,
-        name: productData.productName,
-        batch: productData.batchId,
-        status: getProductStatusString(productData.status),
-        owner: productData.currentCustodian,
-        location: productData.currentLocation,
-        lastUpdate: new Date(
-          Number(productData.lastUpdated) * 1000
-        ).toLocaleString(),
-        expiryDate: new Date(
-          Number(productData.expiryDate) * 1000
-        ).toLocaleDateString(),
-        manufacturer: productData.manufacturer,
-      };
-
-      setScannedProduct(product);
-      // Add to scan history
-      setScanHistory((prev) => [product, ...prev.slice(0, 4)]);
-    } catch (err) {
-      console.error("Error scanning RFID:", err);
-      setError(
-        "Failed to scan RFID: " +
-          (err instanceof Error ? err.message : "Unknown error")
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    setScanHistory([newScan, ...scanHistory]);
+    setManualInput("");
   };
 
-  // Convert product status enum to string
-  const getProductStatusString = (status: number): string => {
-    switch (status) {
-      case 0:
-        return "Manufactured";
-      case 1:
-        return "Packaged";
-      case 2:
-        return "In Transit";
-      case 3:
-        return "Received";
-      case 4:
-        return "Sold";
-      case 5:
-        return "Recalled";
-      default:
-        return "Unknown";
-    }
+  // Simulate camera scan
+  const simulateCameraScan = () => {
+    // In a real app, this would access the device camera
+    const simulatedCodes = [
+      "RFID-HASH-001-ABC",
+      "BARCODE-12345",
+      "QR-CODE-XYZ-789",
+    ];
+    const randomCode =
+      simulatedCodes[Math.floor(Math.random() * simulatedCodes.length)];
+
+    console.log("Simulating camera scan:", randomCode);
+    alert(`Scanned: ${randomCode}`);
+
+    // Add to scan history
+    const newScan: ScanEvent = {
+      id: scanHistory.length + 1,
+      timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
+      productId: randomCode,
+      scannerId: "CAMERA-001",
+      location: "Current Location",
+      action: "camera_scan",
+      result: "success",
+    };
+
+    setScanHistory([newScan, ...scanHistory]);
   };
 
-  // Format status badge
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "manufactured":
-        return (
-          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
-            Manufactured
-          </Badge>
-        );
-      case "packaged":
-        return (
-          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-            Packaged
-          </Badge>
-        );
-      case "in transit":
-        return (
-          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
-            In Transit
-          </Badge>
-        );
-      case "received":
+  // Simulate RFID reader
+  const simulateRFIDReader = () => {
+    // In a real app, this would connect to an RFID reader device
+    const simulatedRFIDs = [
+      "RFID-DEVICE-001",
+      "RFID-DEVICE-002",
+      "RFID-DEVICE-003",
+    ];
+    const randomRFID =
+      simulatedRFIDs[Math.floor(Math.random() * simulatedRFIDs.length)];
+
+    console.log("Simulating RFID read:", randomRFID);
+    alert(`RFID detected: ${randomRFID}`);
+
+    // Add to scan history
+    const newScan: ScanEvent = {
+      id: scanHistory.length + 1,
+      timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
+      productId: randomRFID,
+      scannerId: "RFID-READER-001",
+      location: "Current Location",
+      action: "rfid_read",
+      result: "success",
+    };
+
+    setScanHistory([newScan, ...scanHistory]);
+  };
+
+  // Get verification badge
+  const getVerificationBadge = (result: string) => {
+    switch (result) {
+      case "authentic":
         return (
           <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-            Received
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Authentic
           </Badge>
         );
-      case "sold":
-        return (
-          <Badge className="bg-gradient-to-r from-gray-500 to-gray-700 hover:from-gray-600 hover:to-gray-800">
-            Sold
-          </Badge>
-        );
-      case "recalled":
+      case "tampered":
         return (
           <Badge className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600">
-            Recalled
+            <XCircle className="h-3 w-3 mr-1" />
+            Tampered
+          </Badge>
+        );
+      case "unknown":
+        return (
+          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Unknown
           </Badge>
         );
       default:
         return (
           <Badge className="bg-gradient-to-r from-gray-300 to-gray-500 hover:from-gray-400 hover:to-gray-600">
-            {status}
+            {result}
           </Badge>
         );
     }
   };
 
-  // Refresh scanner
-  const refreshScanner = () => {
-    // Clear input and reset state
-    setRfidInput("");
-    setScannedProduct(null);
-    setError(null);
-    console.log("Refreshing scanner...");
+  // Get action badge
+  const getActionBadge = (action: string) => {
+    switch (action) {
+      case "receive":
+        return (
+          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500">
+            Receive
+          </Badge>
+        );
+      case "quality_check":
+        return (
+          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
+            QA Check
+          </Badge>
+        );
+      case "ship":
+        return (
+          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">
+            Ship
+          </Badge>
+        );
+      case "deliver":
+        return (
+          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500">
+            Deliver
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gradient-to-r from-gray-300 to-gray-500">
+            {action}
+          </Badge>
+        );
+    }
   };
 
-  // Export scan data
-  const exportScanData = () => {
-    // In a real app, this would export scan data to CSV/PDF
-    console.log("Exporting scan data...");
+  // Get result badge
+  const getResultBadge = (result: string) => {
+    switch (result) {
+      case "success":
+        return (
+          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Success
+          </Badge>
+        );
+      case "failure":
+        return (
+          <Badge className="bg-gradient-to-r from-red-500 to-rose-500">
+            <XCircle className="h-3 w-3 mr-1" />
+            Failed
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gradient-to-r from-gray-300 to-gray-500">
+            {result}
+          </Badge>
+        );
+    }
   };
 
   return (
@@ -200,38 +274,22 @@ const ScanRFID = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Scan RFID
+            Scan Products
           </h1>
           <p className="text-gray-600 mt-2">
-            Verify product authenticity using RFID or barcode
+            Verify product authenticity and update supply chain status
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-3">
           <select
-            value={userRole}
-            onChange={(e) => setUserRole(e.target.value)}
+            value={scanMethod}
+            onChange={(e) => setScanMethod(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="admin">Admin</option>
-            <option value="manufacturer">Manufacturer</option>
-            <option value="transporter">Transporter</option>
-            <option value="retailer">Retailer</option>
-            <option value="consumer">Consumer</option>
+            <option value="manual">Manual Entry</option>
+            <option value="camera">Camera Scan</option>
+            <option value="rfid">RFID Reader</option>
           </select>
-          <Button
-            onClick={refreshScanner}
-            className="flex items-center bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            <RefreshCw className="h-5 w-5 mr-2" />
-            Refresh
-          </Button>
-          <Button
-            onClick={exportScanData}
-            className="flex items-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            <Download className="h-5 w-5 mr-2" />
-            Export
-          </Button>
         </div>
       </div>
 
@@ -241,255 +299,239 @@ const ScanRFID = () => {
           <div className="flex items-center justify-center">
             <Scan className="h-5 w-5 text-yellow-600 mr-2" />
             <span className="text-yellow-800 font-medium">
-              Wallet not connected - Connect to interact with blockchain
-              features
+              Wallet not connected - Connect for full verification features
             </span>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Scanner Section */}
-        <div className="lg:col-span-2">
-          <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
-                <Scan className="h-5 w-5 mr-2 text-blue-500" />
-                Product Scanner
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <Label htmlFor="rfidInput" className="text-gray-700">
-                    RFID or Barcode
-                  </Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="rfidInput"
-                      type="text"
-                      placeholder="Enter RFID hash or barcode"
-                      value={rfidInput}
-                      onChange={(e) => setRfidInput(e.target.value)}
-                      className="pl-10"
-                      onKeyPress={(e) => e.key === "Enter" && scanRFID()}
-                    />
-                    <QrCode className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
-                  </div>
-                </div>
-
-                <div className="flex space-x-3">
+      {/* Scan Interface */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-gray-800">
+            {scanMethod === "manual" && (
+              <>
+                <QrCode className="h-5 w-5 mr-2 text-blue-500" />
+                Manual Product Entry
+              </>
+            )}
+            {scanMethod === "camera" && (
+              <>
+                <Camera className="h-5 w-5 mr-2 text-blue-500" />
+                Camera Scanner
+              </>
+            )}
+            {scanMethod === "rfid" && (
+              <>
+                <Rss className="h-5 w-5 mr-2 text-blue-500" />
+                RFID Reader
+              </>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {scanMethod === "manual" && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="manualInput" className="text-gray-700">
+                  Enter Product ID, RFID Hash, or Barcode
+                </Label>
+                <div className="flex mt-1">
+                  <Input
+                    id="manualInput"
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    placeholder="e.g., PROD-123, 0x742d..., BARCODE-12345"
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleManualScan();
+                    }}
+                  />
                   <Button
-                    onClick={scanRFID}
-                    disabled={isLoading || !rfidInput}
-                    className="flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white disabled:opacity-50"
+                    onClick={handleManualScan}
+                    className="ml-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                   >
-                    {isLoading ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Scanning...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-4 w-4 mr-2" />
-                        Scan Product
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={refreshScanner}
-                    variant="outline"
-                    className="flex items-center"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Clear
+                    Scan
                   </Button>
                 </div>
+              </div>
+              <div className="text-sm text-gray-500">
+                <p>
+                  Examples: PROD-123,
+                  0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4, BARCODE-12345
+                </p>
+              </div>
+            </div>
+          )}
 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-                      <span className="text-red-700">{error}</span>
-                    </div>
-                  </div>
-                )}
+          {scanMethod === "camera" && (
+            <div className="text-center py-8">
+              <div className="mx-auto bg-gray-200 border-2 border-dashed rounded-xl w-64 h-64 flex items-center justify-center mb-4">
+                <Camera className="h-16 w-16 text-gray-400" />
+              </div>
+              <p className="text-gray-600 mb-4">
+                Point your camera at a QR code or barcode to scan
+              </p>
+              <Button
+                onClick={simulateCameraScan}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Camera className="h-5 w-5 mr-2" />
+                Simulate Camera Scan
+              </Button>
+            </div>
+          )}
 
-                {scannedProduct && (
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900">
-                          {scannedProduct.name}
-                        </h3>
-                        <p className="text-gray-600 mt-1">
-                          Batch: {scannedProduct.batch}
-                        </p>
+          {scanMethod === "rfid" && (
+            <div className="text-center py-8">
+              <div className="mx-auto bg-gray-200 border-2 border-dashed rounded-xl w-64 h-64 flex items-center justify-center mb-4">
+                <Rss className="h-16 w-16 text-gray-400" />
+              </div>
+              <p className="text-gray-600 mb-4">
+                Place RFID tag near reader to scan
+              </p>
+              <Button
+                onClick={simulateRFIDReader}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <Rss className="h-5 w-5 mr-2" />
+                Simulate RFID Read
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recently Scanned Products */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-gray-800">
+            <Shield className="h-5 w-5 mr-2 text-blue-500" />
+            Recently Scanned Products
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Batch
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Owner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Last Scan
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Verification
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {scannedProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {product.productName}
                       </div>
-                      <Badge
-                        className={`${
-                          scannedProduct.status.toLowerCase() === "recalled"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {scannedProduct.status}
+                      <div className="text-sm text-gray-500">
+                        #{product.productId}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.batchId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500">
+                        {product.status}
                       </Badge>
-                    </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.owner}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.lastScan}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getVerificationBadge(product.verificationResult)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                      <div className="bg-white p-4 rounded-xl border border-gray-200">
-                        <div className="flex items-center text-gray-500 mb-2">
-                          <Package className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">
-                            Product ID
-                          </span>
-                        </div>
-                        <p className="font-mono text-gray-900">
-                          #{scannedProduct.id}
-                        </p>
-                      </div>
-
-                      <div className="bg-white p-4 rounded-xl border border-gray-200">
-                        <div className="flex items-center text-gray-500 mb-2">
-                          <QrCode className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">RFID</span>
-                        </div>
-                        <p className="font-mono text-gray-900 text-sm">
-                          {scannedProduct.rfid}
-                        </p>
-                      </div>
-
-                      <div className="bg-white p-4 rounded-xl border border-gray-200">
-                        <div className="flex items-center text-gray-500 mb-2">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">Location</span>
-                        </div>
-                        <p className="text-gray-900">
-                          {scannedProduct.location}
-                        </p>
-                      </div>
-
-                      <div className="bg-white p-4 rounded-xl border border-gray-200">
-                        <div className="flex items-center text-gray-500 mb-2">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">
-                            Expiry Date
-                          </span>
-                        </div>
-                        <p className="text-gray-900">
-                          {scannedProduct.expiryDate}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 pt-6 border-t border-gray-200">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                        Blockchain Verification
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white p-4 rounded-xl border border-gray-200">
-                          <div className="flex items-center text-gray-500 mb-2">
-                            <Shield className="h-4 w-4 mr-2" />
-                            <span className="text-sm font-medium">Status</span>
-                          </div>
-                          <div className="flex items-center">
-                            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                            <span className="text-green-700 font-medium">
-                              Verified
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="bg-white p-4 rounded-xl border border-gray-200">
-                          <div className="flex items-center text-gray-500 mb-2">
-                            <BarChart3 className="h-4 w-4 mr-2" />
-                            <span className="text-sm font-medium">
-                              Last Update
-                            </span>
-                          </div>
-                          <p className="text-gray-900">
-                            {scannedProduct.lastUpdate}
-                          </p>
-                        </div>
-
-                        <div className="bg-white p-4 rounded-xl border border-gray-200">
-                          <div className="flex items-center text-gray-500 mb-2">
-                            <Package className="h-4 w-4 mr-2" />
-                            <span className="text-sm font-medium">Owner</span>
-                          </div>
-                          <p className="font-mono text-gray-900 text-sm">
-                            {scannedProduct.owner.substring(0, 6)}...
-                            {scannedProduct.owner.substring(
-                              scannedProduct.owner.length - 4
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Scan History */}
-        <div>
-          <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center text-gray-800">
-                <BarChart3 className="h-5 w-5 mr-2 text-blue-500" />
-                Recent Scans
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {scanHistory.length > 0 ? (
-                  scanHistory.map((product) => (
-                    <div
-                      key={product.id}
-                      className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setScannedProduct(product);
-                        setRfidInput(
-                          product.rfid ||
-                            product.barcode ||
-                            product.id.toString()
-                        );
-                      }}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium text-gray-900">
-                            {product.name}
-                          </h4>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {product.batch}
-                          </p>
-                        </div>
-                        {getStatusBadge(product.status)}
-                      </div>
-                      <div className="mt-3 flex items-center text-xs text-gray-500">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {product.lastUpdate}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Scan className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                    <p>No scan history yet</p>
-                    <p className="text-sm mt-1">
-                      Scan a product to see it here
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Scan History */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-gray-800">
+            <Wifi className="h-5 w-5 mr-2 text-blue-500" />
+            Scan History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Timestamp
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Scanner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Result
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {scanHistory.map((event) => (
+                  <tr key={event.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {event.timestamp}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.productId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {event.scannerId}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {event.location}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getActionBadge(event.action)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getResultBadge(event.result)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -11,14 +11,16 @@ import {
 } from "lucide-react";
 import { useWeb3 } from "../contexts/web3ContextTypes";
 import { CHAIN_ID } from "../contracts/contractConfig";
+import { switchNetwork } from "../utils/switchNetwork";
 
 const WalletConnection: React.FC = () => {
-  const { account, chainId, isActive, connectWallet, disconnectWallet } =
+  const { account, chainId, isActive, connectWallet, disconnectWallet, error } =
     useWeb3();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -28,6 +30,19 @@ const WalletConnection: React.FC = () => {
       console.error("Failed to connect wallet:", error);
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleSwitchNetwork = async () => {
+    if (!isActive) return;
+    
+    setIsSwitchingNetwork(true);
+    try {
+      await switchNetwork(CHAIN_ID);
+    } catch (error) {
+      console.error("Failed to switch network:", error);
+    } finally {
+      setIsSwitchingNetwork(false);
     }
   };
 
@@ -162,9 +177,25 @@ const WalletConnection: React.FC = () => {
                 </div>
               </div>
               {!isCorrectNetwork && (
-                <div className="text-sm text-gray-500 mt-3 p-3 bg-gray-800/50 rounded-lg">
-                  Switch to Localhost (Chain ID: {CHAIN_ID}) to interact with
-                  smart contracts
+                <div className="mt-3">
+                  <button
+                    onClick={handleSwitchNetwork}
+                    disabled={isSwitchingNetwork}
+                    className="w-full bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-700 hover:to-amber-700 text-white py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center disabled:opacity-50"
+                  >
+                    {isSwitchingNetwork ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                        Switching Network...
+                      </>
+                    ) : (
+                      "Switch to Correct Network"
+                    )}
+                  </button>
+                  <div className="text-sm text-gray-500 mt-3 p-3 bg-gray-800/50 rounded-lg">
+                    Switch to Localhost (Chain ID: {CHAIN_ID}) to interact with
+                    smart contracts
+                  </div>
                 </div>
               )}
             </div>
@@ -182,6 +213,17 @@ const WalletConnection: React.FC = () => {
                   Connected to ProTrack contracts on Hardhat network. You can
                   now interact with all blockchain features.
                 </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-900/30 rounded-lg border border-red-800/50">
+                <div className="flex items-center gap-3 text-red-400 mb-2">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-bold">Connection Error</span>
+                </div>
+                <div className="text-sm text-red-300">{error}</div>
               </div>
             )}
 

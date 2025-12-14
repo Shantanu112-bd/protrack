@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useWeb3 } from "../../contexts/Web3Context";
+import { useWeb3 } from "../../contexts/web3ContextTypes";
 import ProductTrackingMap from "../map/ProductTrackingMap";
 
 // Define types for our data

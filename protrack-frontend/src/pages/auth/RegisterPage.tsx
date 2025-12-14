@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, User, Mail, Lock, Building } from "lucide-react";
 import { useAuth, UserRole } from "../../contexts/AuthContext";
 import { useNotifications } from "../../contexts/NotificationContext";
+import { useWeb3 } from "../../contexts/web3ContextTypes";
 import WalletConnectButton from "../../components/WalletConnectButton";
 
 const RegisterPage: React.FC = () => {
@@ -18,7 +19,7 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
-  const { connectWallet, isConnected, account } = useWeb3();
+  const { connectWallet, isActive: isConnected, account } = useWeb3();
   const { addNotification } = useNotifications();
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");

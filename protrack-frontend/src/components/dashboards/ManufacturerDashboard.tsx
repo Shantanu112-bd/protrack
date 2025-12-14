@@ -1,25 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { trackingService } from '../../services/supabase';
-import { iotService } from '../../services/IoTService';
-import { useWeb3 } from '../../contexts/Web3Context';
-import { ethers } from 'ethers';
-import { useToast } from '../ui/use-toast';
+import { trackingService } from "../../services/supabase";
+import { useEnhancedWeb3 } from "../../contexts/EnhancedWeb3Context";
+import { keccak256, toUtf8Bytes } from "ethers";
+import { useToast } from "../ui/use-toast";
 
 const ManufacturerDashboard: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newProduct, setNewProduct] = useState({
-    rfid_tag: '',
-    batch_id: '',
-    product_name: '',
-    expiry_date: '',
+    rfid_tag: "",
+    batch_id: "",
+    product_name: "",
+    expiry_date: "",
   });
-  const { contract, address } = useWeb3();
+  const { supplyChainContract: contract, account: address } = useEnhancedWeb3();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -30,14 +35,14 @@ const ManufacturerDashboard: React.FC = () => {
     try {
       setLoading(true);
       // Get products manufactured by this user
-      const data = await trackingService.getProductsByStatus('manufactured');
+      const data = await trackingService.getProductsByStatus("manufactured");
       setProducts(data || []);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error("Error loading products:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load products',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to load products",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -46,24 +51,24 @@ const ManufacturerDashboard: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewProduct(prev => ({ ...prev, [name]: value }));
+    setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
   const mintNewProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!contract || !address) {
       toast({
-        title: 'Error',
-        description: 'Wallet not connected',
-        variant: 'destructive',
+        title: "Error",
+        description: "Wallet not connected",
+        variant: "destructive",
       });
       return;
     }
 
     try {
       setLoading(true);
-      
+
       // Create metadata hash
       const metadata = {
         name: newProduct.product_name,
@@ -71,13 +76,11 @@ const ManufacturerDashboard: React.FC = () => {
         batchId: newProduct.batch_id,
         expiryDate: newProduct.expiry_date,
         manufacturer: address,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
-      
-      const metadataHash = ethers.utils.keccak256(
-        ethers.utils.toUtf8Bytes(JSON.stringify(metadata))
-      );
-      
+
+      const metadataHash = keccak256(toUtf8Bytes(JSON.stringify(metadata)));
+
       // Mint token on blockchain
       const tx = await contract.mintProductToken(
         newProduct.rfid_tag,
@@ -85,21 +88,21 @@ const ManufacturerDashboard: React.FC = () => {
         new Date(newProduct.expiry_date).getTime() / 1000,
         metadataHash
       );
-      
+
       toast({
-        title: 'Transaction Submitted',
-        description: 'Minting product token...',
+        title: "Transaction Submitted",
+        description: "Minting product token...",
       });
-      
+
       const receipt = await tx.wait();
-      
+
       // Get token ID from event
       const event = receipt.events?.find(
-        (event: any) => event.event === 'ProductTokenMinted'
+        (event: any) => event.event === "ProductTokenMinted"
       );
-      
+
       const tokenId = event?.args?.tokenId.toString();
-      
+
       // Create product in Supabase
       await trackingService.createProduct({
         rfid_tag: newProduct.rfid_tag,
@@ -107,29 +110,29 @@ const ManufacturerDashboard: React.FC = () => {
         token_id: tokenId,
         manufacturer_id: address,
         expiry_date: newProduct.expiry_date,
-        status: 'manufactured'
+        status: "manufactured",
       });
-      
+
       toast({
-        title: 'Success',
-        description: 'Product created and token minted',
+        title: "Success",
+        description: "Product created and token minted",
       });
-      
+
       // Reset form and reload products
       setNewProduct({
-        rfid_tag: '',
-        batch_id: '',
-        product_name: '',
-        expiry_date: '',
+        rfid_tag: "",
+        batch_id: "",
+        product_name: "",
+        expiry_date: "",
       });
-      
+
       loadProducts();
     } catch (error) {
-      console.error('Error minting product:', error);
+      console.error("Error minting product:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to mint product token',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to mint product token",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -141,15 +144,16 @@ const ManufacturerDashboard: React.FC = () => {
       // This would open a modal to select recipient and initiate transfer
       // For now, we'll just show a toast
       toast({
-        title: 'Transfer Initiated',
-        description: 'Transfer functionality will be implemented in the next phase',
+        title: "Transfer Initiated",
+        description:
+          "Transfer functionality will be implemented in the next phase",
       });
     } catch (error) {
-      console.error('Error initiating transfer:', error);
+      console.error("Error initiating transfer:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to initiate transfer',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to initiate transfer",
+        variant: "destructive",
       });
     }
   };
@@ -157,14 +161,14 @@ const ManufacturerDashboard: React.FC = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Manufacturer Dashboard</h1>
-      
+
       <Tabs defaultValue="products">
         <TabsList className="mb-4">
           <TabsTrigger value="products">My Products</TabsTrigger>
           <TabsTrigger value="create">Create Product</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="products">
           <Card>
             <CardHeader>
@@ -177,31 +181,45 @@ const ManufacturerDashboard: React.FC = () => {
               {loading ? (
                 <p>Loading products...</p>
               ) : products.length === 0 ? (
-                <p>No products found. Create your first product in the "Create Product" tab.</p>
+                <p>
+                  No products found. Create your first product in the "Create
+                  Product" tab.
+                </p>
               ) : (
                 <div className="grid gap-4">
                   {products.map((product) => (
                     <Card key={product.id} className="p-4">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium">{product.product_name || 'Unnamed Product'}</h3>
-                          <p className="text-sm text-gray-500">RFID: {product.rfid_tag}</p>
-                          <p className="text-sm text-gray-500">Batch: {product.batch_id}</p>
+                          <h3 className="font-medium">
+                            {product.product_name || "Unnamed Product"}
+                          </h3>
                           <p className="text-sm text-gray-500">
-                            Expiry: {new Date(product.expiry_date).toLocaleDateString()}
+                            RFID: {product.rfid_tag}
                           </p>
-                          <p className="text-sm text-gray-500">Status: {product.status}</p>
+                          <p className="text-sm text-gray-500">
+                            Batch: {product.batch_id}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Expiry:{" "}
+                            {new Date(product.expiry_date).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Status: {product.status}
+                          </p>
                         </div>
                         <div className="space-x-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => initiateTransfer(product.id, product.token_id)}
+                            onClick={() =>
+                              initiateTransfer(product.id, product.token_id)
+                            }
                           >
                             Transfer
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                               // View product details
@@ -218,7 +236,7 @@ const ManufacturerDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="create">
           <Card>
             <CardHeader>
@@ -240,7 +258,7 @@ const ManufacturerDashboard: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="grid gap-2">
                   <Label htmlFor="batch_id">Batch ID</Label>
                   <Input
@@ -252,7 +270,7 @@ const ManufacturerDashboard: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="grid gap-2">
                   <Label htmlFor="product_name">Product Name</Label>
                   <Input
@@ -264,7 +282,7 @@ const ManufacturerDashboard: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="grid gap-2">
                   <Label htmlFor="expiry_date">Expiry Date</Label>
                   <Input
@@ -276,15 +294,15 @@ const ManufacturerDashboard: React.FC = () => {
                     required
                   />
                 </div>
-                
+
                 <Button type="submit" disabled={loading}>
-                  {loading ? 'Processing...' : 'Mint Product Token'}
+                  {loading ? "Processing..." : "Mint Product Token"}
                 </Button>
               </form>
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="analytics">
           <Card>
             <CardHeader>

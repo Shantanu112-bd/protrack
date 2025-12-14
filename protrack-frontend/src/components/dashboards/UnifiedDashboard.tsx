@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useWeb3 } from "../../contexts/Web3Context";
+import { useWeb3 } from "../../contexts/web3ContextTypes";
 import { useEnhancedWeb3 } from "../../contexts/EnhancedWeb3Context";
 import { supabase } from "../../services/supabase";
 import ProductTrackingMap from "../map/ProductTrackingMap";

@@ -18,12 +18,16 @@ class ErrorBoundary extends Component<Props, State> {
 
   public static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI.
+    console.log(
+      "ErrorBoundary: Caught error in getDerivedStateFromError",
+      error
+    );
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // You can also log the error to an error reporting service
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("ErrorBoundary: Uncaught error:", error, errorInfo);
     this.setState({
       error,
       errorInfo,
@@ -32,8 +36,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
+      console.log("ErrorBoundary: Rendering fallback UI", this.state.error);
       // You can render any custom fallback UI
       if (this.props.fallback) {
+        console.log("ErrorBoundary: Using custom fallback");
         return this.props.fallback;
       }
 
@@ -73,6 +79,11 @@ class ErrorBoundary extends Component<Props, State> {
                     <pre className="mt-2 text-xs text-gray-600 dark:text-gray-300 overflow-auto">
                       {this.state.error.toString()}
                     </pre>
+                    {this.state.errorInfo && (
+                      <pre className="mt-2 text-xs text-gray-600 dark:text-gray-300 overflow-auto">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    )}
                   </details>
                 )}
               </div>
@@ -91,6 +102,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
+    console.log("ErrorBoundary: Rendering children");
     return this.props.children;
   }
 }

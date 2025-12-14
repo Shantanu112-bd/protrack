@@ -1,10 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useWeb3 } from "./hooks/useWeb3";
-import SupplyChainService from "./services/supplyChainService";
-import Web3 from "web3";
+import React, { useState } from "react";
 
 const AIAssistant = ({ onClose }: { onClose: () => void }) => {
-  const { account, isActive } = useWeb3();
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -15,18 +11,6 @@ const AIAssistant = ({ onClose }: { onClose: () => void }) => {
   ]);
   const [inputText, setInputText] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [supplyChainService, setSupplyChainService] =
-    useState<SupplyChainService | null>(null);
-
-  // Initialize supply chain service
-  useEffect(() => {
-    if (account && isActive && window.ethereum) {
-      const web3 = new Web3(window.ethereum as unknown as string);
-      const service = new SupplyChainService(web3, account);
-      setSupplyChainService(service);
-    }
-  }, [account, isActive]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;

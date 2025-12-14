@@ -1,146 +1,148 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useWeb3 } from "../contexts/web3ContextTypes";
-import { Button } from "./ui/button";
-import {
-  Package,
-  Truck,
-  QrCode,
-  Activity,
-  Wallet,
-  Home,
-  PlusCircle,
-  LogOut,
-  BarChart3,
-  Shield,
-  CheckCircle,
-  TrendingUp,
-} from "lucide-react";
+import React, { useContext, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Web3Context } from "../contexts/web3ContextTypes";
+import { Wallet, LogOut, AlertCircle, Bot } from "lucide-react";
+import AIAssistant from "../AIAssistant";
 
 const Header = () => {
-  const { account, connectWallet, disconnectWallet } = useWeb3();
-  const navigate = useNavigate();
+  const location = useLocation();
+  const { account, isActive, connectWallet, disconnectWallet, error } =
+    useContext(Web3Context);
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
-  const handleDisconnect = () => {
-    disconnectWallet();
-    navigate("/signin");
+  // Navigation items - using relative paths since we're inside the /dashboard/* route
+  const navItems = [
+    { name: "Dashboard", path: "" },
+    { name: "Products", path: "products" },
+    { name: "Shipments", path: "shipments" },
+    { name: "Mint", path: "mint" },
+    { name: "Scan", path: "scan" },
+    { name: "IoT", path: "iot" },
+    { name: "Analytics", path: "analytics" },
+    { name: "Optimization", path: "optimization" },
+    { name: "Quality", path: "quality" },
+    { name: "Compliance", path: "compliance" },
+    { name: "Sensors", path: "sensors" },
+  ];
+
+  // Truncate wallet address for display
+  const truncateAddress = (address: string) => {
+    return `${address.substring(0, 6)}...${address.substring(
+      address.length - 4
+    )}`;
   };
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50 w-full">
-      <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row justify-between items-center py-4 gap-4">
-          <div className="flex items-center space-x-2">
-            <Link to="/dashboard" className="flex items-center">
-              <Package className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-800 ml-2">
-                ProTrack
-              </h1>
-            </Link>
-          </div>
+    <>
+      <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Link to="" className="flex items-center space-x-2">
+                <div className="bg-white text-blue-600 p-1 rounded-lg">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                  </svg>
+                </div>
+                <span className="text-xl font-bold">ProTrack</span>
+              </Link>
+            </div>
 
-          <nav className="flex flex-wrap justify-center gap-4 md:gap-8">
-            <Link
-              to="/dashboard"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <Home className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Link>
-            <Link
-              to="/dashboard/products"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <Package className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Products</span>
-            </Link>
-            <Link
-              to="/dashboard/shipments"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <Truck className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Shipments</span>
-            </Link>
-            <Link
-              to="/dashboard/mint"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <PlusCircle className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Mint</span>
-            </Link>
-            <Link
-              to="/dashboard/scan"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <QrCode className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Scan</span>
-            </Link>
-            <Link
-              to="/dashboard/iot"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <Activity className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">IoT</span>
-            </Link>
-            <Link
-              to="/dashboard/analytics"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <BarChart3 className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Analytics</span>
-            </Link>
-            <Link
-              to="/dashboard/optimization"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <TrendingUp className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Optimization</span>
-            </Link>
-            <Link
-              to="/dashboard/quality"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <CheckCircle className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Quality</span>
-            </Link>
-            <Link
-              to="/dashboard/compliance"
-              className="flex items-center text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              <Shield className="h-5 w-5 mr-1" />
-              <span className="hidden sm:inline">Compliance</span>
-            </Link>
-          </nav>
-
-          <div className="flex items-center space-x-3">
-            {account ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm font-medium text-gray-700 hidden md:inline bg-gray-100 px-3 py-1 rounded-full">
-                  {account.substring(0, 6)}...
-                  {account.substring(account.length - 4)}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={handleDisconnect}
-                  className="flex items-center text-red-600 hover:text-red-700 hover:bg-red-50"
+            <nav className="hidden md:flex space-x-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    location.pathname === `/dashboard/${item.path}` ||
+                    (item.path === "" && location.pathname === "/dashboard")
+                      ? "bg-white text-blue-600"
+                      : "text-white hover:bg-blue-500 hover:bg-opacity-50"
+                  }`}
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span className="hidden md:inline">Disconnect</span>
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={connectWallet}
-                className="flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="flex items-center space-x-4">
+              {/* AI Assistant Button */}
+              <button
+                onClick={() => setIsAIAssistantOpen(true)}
+                className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg transition-colors duration-200 font-medium"
               >
-                <Wallet className="h-4 w-4 mr-2" />
-                Connect Wallet
-              </Button>
-            )}
+                <Bot className="h-4 w-4" />
+                <span className="hidden sm:inline">AI Assistant</span>
+              </button>
+
+              {isActive && account ? (
+                <div className="flex items-center space-x-3 bg-white bg-opacity-20 rounded-lg px-3 py-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-sm font-medium hidden sm:inline-block">
+                      {truncateAddress(account)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={disconnectWallet}
+                    className="text-white hover:text-gray-200 transition-colors"
+                    aria-label="Disconnect wallet"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={connectWallet}
+                  className="flex items-center space-x-2 bg-white text-blue-600 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors duration-200 font-medium"
+                >
+                  <Wallet className="h-4 w-4" />
+                  <span>Connect Wallet</span>
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Mobile navigation */}
+          <div className="md:hidden pb-4">
+            <div className="flex flex-wrap gap-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`px-2 py-1 text-xs rounded transition-colors duration-200 ${
+                    location.pathname === `/dashboard/${item.path}` ||
+                    (item.path === "" && location.pathname === "/dashboard")
+                      ? "bg-white text-blue-600"
+                      : "text-white hover:bg-blue-500 hover:bg-opacity-50"
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Error display */}
+          {error && (
+            <div className="bg-red-500 bg-opacity-80 rounded-lg p-2 mb-2 flex items-center">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              <span className="text-xs">{error}</span>
+            </div>
+          )}
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* AI Assistant Modal */}
+      {isAIAssistantOpen && (
+        <AIAssistant onClose={() => setIsAIAssistantOpen(false)} />
+      )}
+    </>
   );
 };
 

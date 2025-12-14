@@ -1,48 +1,48 @@
-import React from 'react'
-import { motion } from 'framer-motion'
-import { Wallet, Activity, TrendingUp, Shield } from 'lucide-react'
-import SmartContractInteraction from '../../components/SmartContractInteraction'
-import { useWeb3 } from '../../contexts/Web3Context'
-import { useBlockchain } from '../../contexts/BlockchainContext'
+import React from "react";
+import { motion } from "framer-motion";
+import { Wallet, Activity, TrendingUp, Shield } from "lucide-react";
+import SmartContractInteraction from "../../components/SmartContractInteraction";
+import { useWeb3 } from "../../contexts/web3ContextTypes";
+import { useBlockchain } from "../../contexts/BlockchainContext";
 
 const BlockchainDashboard: React.FC = () => {
-  const { account, isConnected, chainId, balance } = useWeb3()
-  const { totalNFTs, recentTransactions } = useBlockchain()
+  const { account, isActive: isConnected, chainId, balance } = useWeb3();
+  const { totalNFTs, recentTransactions } = useBlockchain();
 
   const stats = [
     {
-      name: 'Wallet Balance',
-      value: balance ? `${parseFloat(balance).toFixed(4)} ETH` : '0 ETH',
+      name: "Wallet Balance",
+      value: balance ? `${parseFloat(balance).toFixed(4)} ETH` : "0 ETH",
       icon: Wallet,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800'
+      color: "text-blue-600",
+      bgColor: "bg-blue-50 dark:bg-blue-900/20",
+      borderColor: "border-blue-200 dark:border-blue-800",
     },
     {
-      name: 'Products Minted',
+      name: "Products Minted",
       value: totalNFTs.toString(),
       icon: Activity,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      borderColor: 'border-green-200 dark:border-green-800'
+      color: "text-green-600",
+      bgColor: "bg-green-50 dark:bg-green-900/20",
+      borderColor: "border-green-200 dark:border-green-800",
     },
     {
-      name: 'Transactions',
+      name: "Transactions",
       value: recentTransactions.length.toString(),
       icon: TrendingUp,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      borderColor: 'border-purple-200 dark:border-purple-800'
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-900/20",
+      borderColor: "border-purple-200 dark:border-purple-800",
     },
     {
-      name: 'Network',
-      value: chainId === 1337 ? 'Localhost' : `Chain ${chainId}`,
+      name: "Network",
+      value: chainId === 1337 ? "Localhost" : `Chain ${chainId}`,
       icon: Shield,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      borderColor: 'border-orange-200 dark:border-orange-800'
-    }
-  ]
+      color: "text-orange-600",
+      bgColor: "bg-orange-50 dark:bg-orange-900/20",
+      borderColor: "border-orange-200 dark:border-orange-800",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -53,7 +53,8 @@ const BlockchainDashboard: React.FC = () => {
             Blockchain Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Interact with ProTrack smart contracts and monitor blockchain activity
+            Interact with ProTrack smart contracts and monitor blockchain
+            activity
           </p>
         </div>
       </div>
@@ -97,7 +98,8 @@ const BlockchainDashboard: React.FC = () => {
                 Wallet Not Connected
               </h3>
               <p className="text-yellow-700 dark:text-yellow-300">
-                Connect your MetaMask wallet to interact with smart contracts and view your blockchain activity.
+                Connect your MetaMask wallet to interact with smart contracts
+                and view your blockchain activity.
               </p>
             </div>
           </div>
@@ -140,13 +142,15 @@ const BlockchainDashboard: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <div className="font-mono text-sm text-gray-900 dark:text-white">
-                    {tx.hash.slice(0, 10)}...
+                    {tx.txHash.slice(0, 10)}...
                   </div>
-                  <div className={`text-xs ${
-                    tx.status === 'confirmed' 
-                      ? 'text-green-600 dark:text-green-400' 
-                      : 'text-yellow-600 dark:text-yellow-400'
-                  }`}>
+                  <div
+                    className={`text-xs ${
+                      tx.status === "confirmed"
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-yellow-600 dark:text-yellow-400"
+                    }`}
+                  >
                     {tx.status}
                   </div>
                 </div>
@@ -167,14 +171,19 @@ const BlockchainDashboard: React.FC = () => {
           Getting Started with Smart Contracts
         </h3>
         <div className="space-y-2 text-blue-700 dark:text-blue-300">
-          <p>• Connect your MetaMask wallet to the Localhost network (Chain ID: 1337)</p>
+          <p>
+            • Connect your MetaMask wallet to the Localhost network (Chain ID:
+            1337)
+          </p>
           <p>• Use the Hardhat accounts provided in the terminal for testing</p>
           <p>• Interact with deployed contracts using the buttons above</p>
-          <p>• Monitor your transactions and contract interactions in real-time</p>
+          <p>
+            • Monitor your transactions and contract interactions in real-time
+          </p>
         </div>
       </motion.div>
     </div>
-  )
-}
+  );
+};
 
-export default BlockchainDashboard
+export default BlockchainDashboard;

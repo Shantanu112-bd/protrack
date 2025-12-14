@@ -1,243 +1,237 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useWeb3 } from "../contexts/web3ContextTypes";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./ui/table";
+import { Textarea } from "./ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
+  ShieldCheck,
+  Gavel,
+  AlertTriangle,
   CheckCircle,
   XCircle,
-  Search,
-  Eye,
   FileText,
   Download,
-  RefreshCw,
-  AlertTriangle,
-  Shield,
-  Gavel,
+  Eye,
 } from "lucide-react";
 
 // Define types
-interface ComplianceRecord {
+interface ComplianceProfile {
   id: number;
-  productId: number;
-  productName: string;
-  regulation: string;
-  status: string;
-  lastChecked: string;
-  nextReview: string;
-  complianceOfficer: string;
-  notes: string;
+  name: string;
+  region: string;
+  description: string;
+  requirements: string[];
+  lastUpdated: string;
 }
 
-interface AuditTrail {
+interface AuditLog {
   id: number;
-  recordId: number;
-  action: string;
+  productId: string;
+  productName: string;
+  profileId: number;
   timestamp: string;
-  user: string;
-  details: string;
+  status: string;
+  findings: string[];
+  auditor: string;
+  signature?: string;
+}
+
+interface Recall {
+  id: number;
+  productId: string;
+  productName: string;
+  batchId: string;
+  reason: string;
+  initiatedBy: string;
+  initiatedAt: string;
+  status: string;
+  affectedUnits: number;
+  resolution?: string;
 }
 
 const ComplianceManagement = () => {
   const { isActive } = useWeb3();
-  const [complianceRecords, setComplianceRecords] = useState<
-    ComplianceRecord[]
-  >([]);
-  const [auditTrails, setAuditTrails] = useState<AuditTrail[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [activeTab, setActiveTab] = useState("records");
-  const [userRole, setUserRole] = useState("admin"); // Add user role state
+  const [profiles] = useState<ComplianceProfile[]>([
+    {
+      id: 1,
+      name: "FDA Food Safety",
+      region: "United States",
+      description:
+        "Food safety regulations for food manufacturers and distributors",
+      requirements: [
+        "HACCP Plan",
+        "Good Manufacturing Practices",
+        "Traceability Requirements",
+        "Labeling Standards",
+      ],
+      lastUpdated: "2023-11-15",
+    },
+    {
+      id: 2,
+      name: "EU GDPR",
+      region: "European Union",
+      description: "General Data Protection Regulation for data handling",
+      requirements: [
+        "Data Consent",
+        "Right to Access",
+        "Data Portability",
+        "Breach Notification",
+      ],
+      lastUpdated: "2023-10-22",
+    },
+    {
+      id: 3,
+      name: "ISO 22000",
+      region: "Global",
+      description: "International standard for food safety management",
+      requirements: [
+        "Hazard Analysis",
+        "Prerequisite Programs",
+        "Management System",
+        "Traceability",
+      ],
+      lastUpdated: "2023-09-30",
+    },
+  ]);
+  const [auditLogs] = useState<AuditLog[]>([
+    {
+      id: 1,
+      productId: "PROD-101",
+      productName: "Organic Coffee Beans",
+      profileId: 1,
+      timestamp: "2023-12-01 10:30:00",
+      status: "passed",
+      findings: ["All HACCP requirements met", "Traceability records complete"],
+      auditor: "AUDITOR-001",
+      signature: "0x742d...a3b8",
+    },
+    {
+      id: 2,
+      productId: "PROD-102",
+      productName: "Premium Chocolate",
+      profileId: 1,
+      timestamp: "2023-12-02 14:15:00",
+      status: "failed",
+      findings: [
+        "Missing temperature logs",
+        "Incomplete traceability records",
+        "Labeling discrepancies",
+      ],
+      auditor: "AUDITOR-002",
+    },
+  ]);
+  const [recalls, setRecalls] = useState<Recall[]>([
+    {
+      id: 1,
+      productId: "PROD-103",
+      productName: "Organic Honey",
+      batchId: "BATCH-2023-003",
+      reason: "Potential contamination detected",
+      initiatedBy: "QA Department",
+      initiatedAt: "2023-12-03 09:45:00",
+      status: "active",
+      affectedUnits: 1250,
+    },
+  ]);
+  const [showRecallForm, setShowRecallForm] = useState(false);
+  const [newRecall, setNewRecall] = useState({
+    productId: "",
+    productName: "",
+    batchId: "",
+    reason: "",
+  });
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockComplianceRecords: ComplianceRecord[] = [
-      {
-        id: 1,
-        productId: 101,
-        productName: "Organic Coffee Beans",
-        regulation: "FDA Organic Standards",
-        status: "compliant",
-        lastChecked: "2023-11-15",
-        nextReview: "2024-05-15",
-        complianceOfficer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        notes: "All tests passed, documentation complete",
-      },
-      {
-        id: 2,
-        productId: 102,
-        productName: "Premium Chocolate",
-        regulation: "EU Food Safety Regulations",
-        status: "non-compliant",
-        lastChecked: "2023-11-20",
-        nextReview: "2023-12-20",
-        complianceOfficer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        notes: "Missing allergen declaration on packaging",
-      },
-      {
-        id: 3,
-        productId: 103,
-        productName: "Organic Honey",
-        regulation: "USDA Organic Certification",
-        status: "pending-review",
-        lastChecked: "2023-11-25",
-        nextReview: "2023-12-10",
-        complianceOfficer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        notes: "Awaiting laboratory results",
-      },
-      {
-        id: 4,
-        productId: 104,
-        productName: "Artisanal Cheese",
-        regulation: "EU Dairy Regulations",
-        status: "compliant",
-        lastChecked: "2023-11-30",
-        nextReview: "2024-05-30",
-        complianceOfficer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        notes: "Certification renewed, all standards met",
-      },
-      {
-        id: 5,
-        productId: 105,
-        productName: "Cold-Pressed Olive Oil",
-        regulation: "ISO 22000 Food Safety",
-        status: "under-audit",
-        lastChecked: "2023-12-01",
-        nextReview: "2023-12-15",
-        complianceOfficer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        notes: "Internal audit in progress",
-      },
-    ];
+  // Handle new recall change
+  const handleRecallChange = (field: keyof typeof newRecall, value: string) => {
+    setNewRecall({
+      ...newRecall,
+      [field]: value,
+    });
+  };
 
-    const mockAuditTrails: AuditTrail[] = [
-      {
-        id: 1,
-        recordId: 1,
-        action: "Compliance Check",
-        timestamp: "2023-11-15 10:30:00",
-        user: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        details: "Verified organic certification documents",
-      },
-      {
-        id: 2,
-        recordId: 2,
-        action: "Non-Compliance Report",
-        timestamp: "2023-11-20 14:15:00",
-        user: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        details: "Identified missing allergen information",
-      },
-      {
-        id: 3,
-        recordId: 3,
-        action: "Document Submission",
-        timestamp: "2023-11-25 09:45:00",
-        user: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        details: "Submitted laboratory test results",
-      },
-      {
-        id: 4,
-        recordId: 4,
-        action: "Certification Renewal",
-        timestamp: "2023-11-30 16:20:00",
-        user: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        details: "Renewed EU dairy certification",
-      },
-      {
-        id: 5,
-        recordId: 5,
-        action: "Audit Initiated",
-        timestamp: "2023-12-01 11:00:00",
-        user: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        details: "Started internal ISO 22000 audit",
-      },
-    ];
-
-    setComplianceRecords(mockComplianceRecords);
-    setAuditTrails(mockAuditTrails);
-  }, []);
-
-  // Refresh compliance data
-  const refreshComplianceData = async () => {
-    if (!isActive) {
-      console.log("Wallet not connected");
+  // Submit new recall
+  const submitRecall = () => {
+    if (!newRecall.productId || !newRecall.reason) {
+      alert("Please fill in required fields");
       return;
     }
 
-    try {
-      // In a real implementation, you'd fetch actual compliance data from the blockchain
-      console.log("Refreshing compliance data...");
-    } catch (error) {
-      console.error("Error refreshing compliance data:", error);
-    }
+    // In a real app, this would interact with the blockchain
+    console.log("Submitting recall:", newRecall);
+    alert("Recall initiated successfully!");
+
+    // Add to recalls
+    const newRecallEntry: Recall = {
+      id: recalls.length + 1,
+      productId: newRecall.productId,
+      productName: newRecall.productName,
+      batchId: newRecall.batchId,
+      reason: newRecall.reason,
+      initiatedBy: "CURRENT_USER",
+      initiatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
+      status: "active",
+      affectedUnits: 0, // Would be calculated in real app
+    };
+
+    setRecalls([...recalls, newRecallEntry]);
+
+    // Reset form
+    setNewRecall({
+      productId: "",
+      productName: "",
+      batchId: "",
+      reason: "",
+    });
+    setShowRecallForm(false);
   };
 
-  // Export compliance data
-  const exportComplianceData = () => {
-    // In a real app, this would export data to CSV/PDF
-    console.log("Exporting compliance data...");
-  };
-
-  // Filter compliance records based on search term and status
-  const filteredRecords = complianceRecords.filter((record) => {
-    const matchesSearch =
-      record.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.regulation.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "all" ||
-      record.status.toLowerCase().replace("-", "") ===
-        statusFilter.toLowerCase().replace("-", "");
-
-    return matchesSearch && matchesStatus;
-  });
-
-  // Filter audit trails based on search term
-  const filteredAuditTrails = auditTrails.filter((trail) => {
-    return (
-      trail.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trail.user.toLowerCase().includes(searchTerm.toLowerCase())
+  // Resolve recall
+  const resolveRecall = (id: number) => {
+    setRecalls(
+      recalls.map((recall) =>
+        recall.id === id
+          ? {
+              ...recall,
+              status: "resolved",
+              resolution: "Issue addressed and verified",
+            }
+          : recall
+      )
     );
-  });
+  };
 
-  // Format status badge for compliance records
-  const getComplianceStatusBadge = (status: string) => {
-    switch (status.toLowerCase().replace("-", " ")) {
-      case "compliant":
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "passed":
         return (
           <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
-            <CheckCircle className="h-4 w-4 mr-1" />
-            Compliant
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Passed
           </Badge>
         );
-      case "non compliant":
+      case "failed":
         return (
           <Badge className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600">
-            <XCircle className="h-4 w-4 mr-1" />
-            Non-Compliant
+            <XCircle className="h-3 w-3 mr-1" />
+            Failed
           </Badge>
         );
-      case "pending review":
+      case "active":
         return (
           <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600">
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            Pending Review
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Active
           </Badge>
         );
-      case "under audit":
+      case "resolved":
         return (
-          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
-            <Gavel className="h-4 w-4 mr-1" />
-            Under Audit
+          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Resolved
           </Badge>
         );
       default:
@@ -249,16 +243,10 @@ const ComplianceManagement = () => {
     }
   };
 
-  // View compliance record details
-  const viewRecordDetails = (record: ComplianceRecord) => {
-    // In a real implementation, this would open a modal with record details
-    console.log("Viewing record details:", record);
-  };
-
-  // View audit trail details
-  const viewAuditTrailDetails = (trail: AuditTrail) => {
-    // In a real implementation, this would open a modal with audit trail details
-    console.log("Viewing audit trail details:", trail);
+  // Get profile name by ID
+  const getProfileName = (profileId: number) => {
+    const profile = profiles.find((p) => p.id === profileId);
+    return profile ? profile.name : "Unknown Profile";
   };
 
   return (
@@ -269,34 +257,16 @@ const ComplianceManagement = () => {
             Compliance Management
           </h1>
           <p className="text-gray-600 mt-2">
-            Track and manage regulatory compliance for your supply chain
+            Manage regulatory compliance, audits, and product recalls
           </p>
         </div>
-        <div className="mt-4 md:mt-0 flex space-x-3">
-          <select
-            value={userRole}
-            onChange={(e) => setUserRole(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="admin">Admin</option>
-            <option value="manufacturer">Manufacturer</option>
-            <option value="transporter">Transporter</option>
-            <option value="retailer">Retailer</option>
-            <option value="consumer">Consumer</option>
-          </select>
+        <div className="mt-4 md:mt-0">
           <Button
-            onClick={refreshComplianceData}
-            className="flex items-center bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
+            onClick={() => setShowRecallForm(!showRecallForm)}
+            className="flex items-center bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
-            <RefreshCw className="h-5 w-5 mr-2" />
-            Refresh
-          </Button>
-          <Button
-            onClick={exportComplianceData}
-            className="flex items-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            <Download className="h-5 w-5 mr-2" />
-            Export
+            <AlertTriangle className="h-5 w-5 mr-2" />
+            {showRecallForm ? "Cancel" : "Initiate Recall"}
           </Button>
         </div>
       </div>
@@ -305,276 +275,336 @@ const ComplianceManagement = () => {
       {!isActive && (
         <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl p-4 text-center shadow-lg">
           <div className="flex items-center justify-center">
-            <Shield className="h-5 w-5 text-yellow-600 mr-2" />
+            <ShieldCheck className="h-5 w-5 text-yellow-600 mr-2" />
             <span className="text-yellow-800 font-medium">
-              Wallet not connected - Connect to interact with blockchain
-              features
+              Wallet not connected - Connect for blockchain-verified compliance
             </span>
           </div>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("records")}
-          className={`py-3 px-6 font-medium text-sm ${
-            activeTab === "records"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Compliance Records
-        </button>
-        <button
-          onClick={() => setActiveTab("audit")}
-          className={`py-3 px-6 font-medium text-sm ${
-            activeTab === "audit"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Audit Trail
-        </button>
-      </div>
-
-      {/* Search and Filter Section */}
+      {/* Compliance Profiles */}
       <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center text-gray-800">
-            <Search className="h-5 w-5 mr-2 text-blue-500" />
-            Search & Filter
+            <Gavel className="h-5 w-5 mr-2 text-blue-500" />
+            Compliance Profiles
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="search" className="text-gray-700">
-                Search
-              </Label>
-              <div className="relative mt-1">
-                <Input
-                  id="search"
-                  type="text"
-                  placeholder="Search by product, regulation, or action..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-                <Search className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="status" className="text-gray-700">
-                Filter by Status
-              </Label>
-              <select
-                id="status"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Statuses</option>
-                <option value="compliant">Compliant</option>
-                <option value="non-compliant">Non-Compliant</option>
-                <option value="pending-review">Pending Review</option>
-                <option value="under-audit">Under Audit</option>
-              </select>
-            </div>
-            <div className="flex items-end">
-              <Button
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                }}
-                className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white"
-              >
-                Clear Filters
-              </Button>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {profiles.map((profile) => (
+              <Card key={profile.id} className="border border-gray-200">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <ShieldCheck className="h-5 w-5 mr-2 text-blue-500" />
+                    {profile.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">
+                        Region:
+                      </span>
+                      <p className="text-sm text-gray-900">{profile.region}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">
+                        Description:
+                      </span>
+                      <p className="text-sm text-gray-900">
+                        {profile.description}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">
+                        Requirements:
+                      </span>
+                      <ul className="mt-1 space-y-1">
+                        {profile.requirements.map((req, index) => (
+                          <li key={index} className="text-sm text-gray-900">
+                            • {req}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200">
+                      <span className="text-xs text-gray-500">
+                        Last Updated: {profile.lastUpdated}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Compliance Records Tab */}
-      {activeTab === "records" && (
+      {/* Initiate Recall Form */}
+      {showRecallForm && (
         <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center text-gray-800">
-              <FileText className="h-5 w-5 mr-2 text-blue-500" />
-              Compliance Records
+              <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
+              Initiate Product Recall
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border border-gray-200 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="text-gray-700 font-bold">
-                      ID
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Product
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Regulation
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Last Checked
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Next Review
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Officer
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRecords.length > 0 ? (
-                    filteredRecords.map((record) => (
-                      <TableRow key={record.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">
-                          {record.id}
-                        </TableCell>
-                        <TableCell>{record.productName}</TableCell>
-                        <TableCell>{record.regulation}</TableCell>
-                        <TableCell>
-                          {getComplianceStatusBadge(record.status)}
-                        </TableCell>
-                        <TableCell>{record.lastChecked}</TableCell>
-                        <TableCell>{record.nextReview}</TableCell>
-                        <TableCell>
-                          <div className="font-mono text-sm">
-                            {record.complianceOfficer.substring(0, 6)}...
-                            {record.complianceOfficer.substring(
-                              record.complianceOfficer.length - 4
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            onClick={() => viewRecordDetails(record)}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        No compliance records found matching your criteria
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="productId" className="text-gray-700">
+                  Product ID *
+                </Label>
+                <Input
+                  id="productId"
+                  value={newRecall.productId}
+                  onChange={(e) =>
+                    handleRecallChange("productId", e.target.value)
+                  }
+                  placeholder="Enter product ID"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="productName" className="text-gray-700">
+                  Product Name
+                </Label>
+                <Input
+                  id="productName"
+                  value={newRecall.productName}
+                  onChange={(e) =>
+                    handleRecallChange("productName", e.target.value)
+                  }
+                  placeholder="Enter product name"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="batchId" className="text-gray-700">
+                  Batch ID
+                </Label>
+                <Input
+                  id="batchId"
+                  value={newRecall.batchId}
+                  onChange={(e) =>
+                    handleRecallChange("batchId", e.target.value)
+                  }
+                  placeholder="Enter batch ID"
+                  className="mt-1"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="reason" className="text-gray-700">
+                  Reason for Recall *
+                </Label>
+                <Textarea
+                  id="reason"
+                  value={newRecall.reason}
+                  onChange={(e) => handleRecallChange("reason", e.target.value)}
+                  placeholder="Describe the reason for initiating this recall"
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="mt-6">
+              <Button
+                onClick={submitRecall}
+                className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white py-3"
+              >
+                Initiate Recall
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Audit Trail Tab */}
-      {activeTab === "audit" && (
-        <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center text-gray-800">
-              <Gavel className="h-5 w-5 mr-2 text-blue-500" />
-              Audit Trail
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-gray-200 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="text-gray-700 font-bold">
-                      ID
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Record ID
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Action
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Timestamp
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      User
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold">
-                      Details
-                    </TableHead>
-                    <TableHead className="text-gray-700 font-bold text-right">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAuditTrails.length > 0 ? (
-                    filteredAuditTrails.map((trail) => (
-                      <TableRow key={trail.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">
-                          {trail.id}
-                        </TableCell>
-                        <TableCell>{trail.recordId}</TableCell>
-                        <TableCell className="font-medium">
-                          {trail.action}
-                        </TableCell>
-                        <TableCell>{trail.timestamp}</TableCell>
-                        <TableCell>
-                          <div className="font-mono text-sm">
-                            {trail.user.substring(0, 6)}...
-                            {trail.user.substring(trail.user.length - 4)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {trail.details}
-                        </TableCell>
-                        <TableCell className="text-right">
+      {/* Active Recalls */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-gray-800">
+            <AlertTriangle className="h-5 w-5 mr-2 text-red-500" />
+            Active Recalls
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Batch
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Reason
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Initiated
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Affected Units
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recalls.map((recall) => (
+                  <tr key={recall.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {recall.productName}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        #{recall.productId}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {recall.batchId}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      {recall.reason}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {recall.initiatedAt}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {recall.affectedUnits}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(recall.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {recall.status === "active" ? (
+                        <div className="flex space-x-2">
                           <Button
-                            onClick={() => viewAuditTrailDetails(trail)}
-                            variant="outline"
+                            onClick={() => resolveRecall(recall.id)}
                             size="sm"
-                            className="flex items-center"
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
+                            Resolve
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-8 text-gray-500"
-                      >
-                        No audit trail entries found matching your criteria
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                          <Button size="sm" variant="outline">
+                            <Eye className="h-4 w-4 mr-1" />
+                            Details
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Details
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Audit Logs */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-gray-800">
+            <FileText className="h-5 w-5 mr-2 text-blue-500" />
+            Recent Audit Logs
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Compliance Profile
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Auditor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Timestamp
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Findings
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {log.productName}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        #{log.productId}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getProfileName(log.profileId)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {log.auditor}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {log.timestamp}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(log.status)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                      <ul className="space-y-1">
+                        {log.findings.slice(0, 2).map((finding, index) => (
+                          <li key={index} className="truncate">
+                            • {finding}
+                          </li>
+                        ))}
+                        {log.findings.length > 2 && (
+                          <li className="text-gray-500">
+                            +{log.findings.length - 2} more
+                          </li>
+                        )}
+                      </ul>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Download className="h-4 w-4 mr-1" />
+                          Report
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

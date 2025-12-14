@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useWeb3 } from "../contexts/web3ContextTypes";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import {
   Table,
   TableBody,
@@ -14,28 +14,41 @@ import {
 } from "./ui/table";
 import { Badge } from "./ui/badge";
 import {
-  MapPin,
   Truck,
   Search,
   Filter,
   Eye,
-  Calendar,
   Download,
   RefreshCw,
-  Edit,
+  MapPin,
+  Calendar,
+  Package,
 } from "lucide-react";
 
 // Define types
 interface Shipment {
   id: number;
-  trackingId: string;
-  productName: string;
-  status: string;
+  shipmentId: string;
   origin: string;
   destination: string;
-  estimatedArrival: string;
-  carrier: string;
-  lastUpdate: string;
+  carrierId: string;
+  expectedETD: string;
+  expectedETA: string;
+  currentStatus: string;
+  packingList: { productId: number; quantity: number }[];
+  deviceId: string;
+  events: ShipmentEvent[];
+  insurancePolicy?: string;
+  sla?: string;
+  claimRecords?: string[];
+}
+
+interface ShipmentEvent {
+  id: number;
+  timestamp: string;
+  location: string;
+  eventType: string;
+  signer: string;
 }
 
 const Shipments = () => {
@@ -43,65 +56,120 @@ const Shipments = () => {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [userRole, setUserRole] = useState("admin"); // Add user role state
+  const [userRole, setUserRole] = useState("admin");
 
   // Mock data for demonstration
   useEffect(() => {
     setShipments([
       {
         id: 1,
-        trackingId: "TRK-001-ABC",
-        productName: "Organic Coffee Beans",
-        status: "In Transit",
-        origin: "Seattle, WA",
-        destination: "New York, NY",
-        estimatedArrival: "2023-12-10",
-        carrier: "FedEx",
-        lastUpdate: "2023-12-01 14:30:00",
+        shipmentId: "SHP-2023-001",
+        origin: "Factory A, Chicago",
+        destination: "Warehouse B, Los Angeles",
+        carrierId: "CARRIER-001",
+        expectedETD: "2023-12-01 08:00:00",
+        expectedETA: "2023-12-05 16:00:00",
+        currentStatus: "In Transit",
+        packingList: [
+          { productId: 1, quantity: 100 },
+          { productId: 2, quantity: 50 },
+        ],
+        deviceId: "DEV-TRK-001",
+        events: [
+          {
+            id: 1,
+            timestamp: "2023-12-01 08:15:00",
+            location: "Factory A, Chicago",
+            eventType: "Departure",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+          {
+            id: 2,
+            timestamp: "2023-12-02 14:30:00",
+            location: "Distribution Center, Denver",
+            eventType: "Arrival",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+          {
+            id: 3,
+            timestamp: "2023-12-02 16:45:00",
+            location: "Distribution Center, Denver",
+            eventType: "Departure",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+        ],
+        insurancePolicy: "POLICY-INS-001",
+        sla: "2-day delivery guarantee",
+        claimRecords: [],
       },
       {
         id: 2,
-        trackingId: "TRK-002-DEF",
-        productName: "Premium Chocolate",
-        status: "Delivered",
-        origin: "San Francisco, CA",
-        destination: "Los Angeles, CA",
-        estimatedArrival: "2023-12-05",
-        carrier: "UPS",
-        lastUpdate: "2023-12-02 09:15:00",
+        shipmentId: "SHP-2023-002",
+        origin: "Warehouse C, Miami",
+        destination: "Store D, New York",
+        carrierId: "CARRIER-002",
+        expectedETD: "2023-12-03 10:00:00",
+        expectedETA: "2023-12-06 14:00:00",
+        currentStatus: "Prepared",
+        packingList: [
+          { productId: 3, quantity: 200 },
+          { productId: 4, quantity: 75 },
+        ],
+        deviceId: "DEV-TRK-002",
+        events: [
+          {
+            id: 1,
+            timestamp: "2023-12-03 09:30:00",
+            location: "Warehouse C, Miami",
+            eventType: "Packing",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+        ],
       },
       {
         id: 3,
-        trackingId: "TRK-003-GHI",
-        productName: "Organic Honey",
-        status: "Processing",
-        origin: "Chicago, IL",
-        destination: "Miami, FL",
-        estimatedArrival: "2023-12-15",
-        carrier: "DHL",
-        lastUpdate: "2023-12-03 11:45:00",
-      },
-      {
-        id: 4,
-        trackingId: "TRK-004-JKL",
-        productName: "Artisanal Cheese",
-        status: "Shipped",
-        origin: "Boston, MA",
-        destination: "Atlanta, GA",
-        estimatedArrival: "2023-12-12",
-        carrier: "USPS",
-        lastUpdate: "2023-12-04 16:20:00",
-      },
-      {
-        id: 5,
-        trackingId: "TRK-005-MNO",
-        productName: "Cold-Pressed Olive Oil",
-        status: "In Transit",
-        origin: "Portland, OR",
-        destination: "Dallas, TX",
-        estimatedArrival: "2023-12-18",
-        carrier: "FedEx",
-        lastUpdate: "2023-12-05 10:45:00",
+        shipmentId: "SHP-2023-003",
+        origin: "Factory E, Seattle",
+        destination: "Distribution Center F, Atlanta",
+        carrierId: "CARRIER-003",
+        expectedETD: "2023-12-04 07:00:00",
+        expectedETA: "2023-12-08 18:00:00",
+        currentStatus: "Delivered",
+        packingList: [{ productId: 5, quantity: 150 }],
+        deviceId: "DEV-TRK-003",
+        events: [
+          {
+            id: 1,
+            timestamp: "2023-12-04 07:15:00",
+            location: "Factory E, Seattle",
+            eventType: "Departure",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+          {
+            id: 2,
+            timestamp: "2023-12-06 12:30:00",
+            location: "Customs Office, Chicago",
+            eventType: "Customs Inspection",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+          {
+            id: 3,
+            timestamp: "2023-12-07 09:45:00",
+            location: "Distribution Center F, Atlanta",
+            eventType: "Arrival",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+          {
+            id: 4,
+            timestamp: "2023-12-07 10:30:00",
+            location: "Distribution Center F, Atlanta",
+            eventType: "Delivery",
+            signer: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+          },
+        ],
+        insurancePolicy: "POLICY-INS-002",
+        sla: "Ground shipping - 4 day delivery",
+        claimRecords: ["CLAIM-001"],
       },
     ]);
   }, []);
@@ -114,8 +182,40 @@ const Shipments = () => {
     }
 
     try {
-      // In a real implementation, you'd fetch actual shipment data from the blockchain
-      console.log("Refreshing shipments data...");
+      // Get provider and contract instance
+      // const provider = getProvider(); // Commented out to avoid linter error
+      // In a real implementation, you'd call contract methods here
+
+      // For now, we'll use a simple approach to fetch some shipments
+      // In a real implementation, you'd want to track all shipments
+      const shipmentIds = [1, 2, 3]; // Sample shipment IDs
+      const fetchedShipments: Shipment[] = [];
+
+      for (const id of shipmentIds) {
+        try {
+          // Get shipment data
+          // This is a mock implementation - in reality, you'd call the appropriate contract methods
+          const shipmentData = {
+            id,
+            shipmentId: `SHP-2023-${id.toString().padStart(3, "0")}`,
+            origin: "Sample Origin",
+            destination: "Sample Destination",
+            carrierId: "CARRIER-001",
+            expectedETD: "2023-12-01 08:00:00",
+            expectedETA: "2023-12-05 16:00:00",
+            currentStatus: "In Transit",
+            packingList: [{ productId: id, quantity: 100 }],
+            deviceId: `DEV-TRK-${id.toString().padStart(3, "0")}`,
+            events: [],
+          };
+
+          fetchedShipments.push(shipmentData as Shipment);
+        } catch (error) {
+          console.error(`Error fetching shipment ${id}:`, error);
+        }
+      }
+
+      setShipments(fetchedShipments);
     } catch (error) {
       console.error("Error refreshing shipments:", error);
     }
@@ -130,12 +230,14 @@ const Shipments = () => {
   // Filter shipments based on search term and status
   const filteredShipments = shipments.filter((shipment) => {
     const matchesSearch =
-      shipment.trackingId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      shipment.productName.toLowerCase().includes(searchTerm.toLowerCase());
+      shipment.shipmentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      shipment.carrierId.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" ||
-      shipment.status.toLowerCase() === statusFilter.toLowerCase();
+      shipment.currentStatus.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -143,16 +245,10 @@ const Shipments = () => {
   // Format status badge
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case "processing":
+      case "prepared":
         return (
           <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
-            Processing
-          </Badge>
-        );
-      case "shipped":
-        return (
-          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600">
-            Shipped
+            Prepared
           </Badge>
         );
       case "in transit":
@@ -171,6 +267,12 @@ const Shipments = () => {
         return (
           <Badge className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600">
             Delayed
+          </Badge>
+        );
+      case "cancelled":
+        return (
+          <Badge className="bg-gradient-to-r from-gray-500 to-gray-700 hover:from-gray-600 hover:to-gray-800">
+            Cancelled
           </Badge>
         );
       default:
@@ -214,7 +316,7 @@ const Shipments = () => {
             Shipments
           </h1>
           <p className="text-gray-600 mt-2">
-            Track and manage your supply chain shipments
+            Manage and track your supply chain shipments
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex space-x-3">
@@ -277,7 +379,7 @@ const Shipments = () => {
                 <Input
                   id="search"
                   type="text"
-                  placeholder="Search by tracking ID or product name..."
+                  placeholder="Search by shipment ID, origin, destination..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -296,11 +398,11 @@ const Shipments = () => {
                 className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All Statuses</option>
-                <option value="processing">Processing</option>
-                <option value="shipped">Shipped</option>
+                <option value="prepared">Prepared</option>
                 <option value="in transit">In Transit</option>
                 <option value="delivered">Delivered</option>
                 <option value="delayed">Delayed</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -323,7 +425,7 @@ const Shipments = () => {
         <CardHeader>
           <CardTitle className="flex items-center text-gray-800">
             <Truck className="h-5 w-5 mr-2 text-blue-500" />
-            Shipment Tracking
+            Shipment Records
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -333,25 +435,22 @@ const Shipments = () => {
                 <TableRow>
                   <TableHead className="text-gray-700 font-bold">ID</TableHead>
                   <TableHead className="text-gray-700 font-bold">
-                    Tracking ID
+                    Shipment
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
-                    Product
+                    Route
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
                     Status
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
-                    Origin
-                  </TableHead>
-                  <TableHead className="text-gray-700 font-bold">
-                    Destination
-                  </TableHead>
-                  <TableHead className="text-gray-700 font-bold">
-                    Est. Arrival
-                  </TableHead>
-                  <TableHead className="text-gray-700 font-bold">
                     Carrier
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Device
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Timeline
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold text-right">
                     Actions
@@ -365,30 +464,54 @@ const Shipments = () => {
                       <TableCell className="font-medium">
                         {shipment.id}
                       </TableCell>
-                      <TableCell className="font-mono">
-                        {shipment.trackingId}
-                      </TableCell>
-                      <TableCell>{shipment.productName}</TableCell>
-                      <TableCell>{getStatusBadge(shipment.status)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1 text-gray-500" />
-                          {shipment.origin}
+                        <div>
+                          <div className="font-medium">
+                            {shipment.shipmentId}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ETD: {shipment.expectedETD}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            ETA: {shipment.expectedETA}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1 text-gray-500" />
-                          {shipment.destination}
+                          <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+                          <span className="text-sm">
+                            {shipment.origin.split(",")[0]}
+                          </span>
+                        </div>
+                        <div className="flex items-center mt-1">
+                          <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+                          <span className="text-sm">
+                            {shipment.destination.split(",")[0]}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(shipment.currentStatus)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-mono text-sm">
+                          {shipment.carrierId}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-mono text-sm">
+                          {shipment.deviceId}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1 text-gray-500" />
-                          {shipment.estimatedArrival}
+                          <Calendar className="h-4 w-4 text-gray-500 mr-1" />
+                          <span className="text-sm">
+                            {shipment.events.length} events
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell>{shipment.carrier}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
                           <Button
@@ -406,8 +529,8 @@ const Shipments = () => {
                               size="sm"
                               className="flex items-center"
                             >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Update
+                              <Truck className="h-4 w-4 mr-1" />
+                              Track
                             </Button>
                           )}
                         </div>
@@ -417,7 +540,7 @@ const Shipments = () => {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={8}
                       className="text-center py-8 text-gray-500"
                     >
                       No shipments found matching your criteria
@@ -426,6 +549,52 @@ const Shipments = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Packing Lists Section */}
+      <Card className="bg-gradient-to-br from-white to-gray-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center text-gray-800">
+            <Package className="h-5 w-5 mr-2 text-blue-500" />
+            Packing Lists
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {shipments.slice(0, 3).map((shipment) => (
+              <Card key={shipment.id} className="border border-gray-200">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    {shipment.shipmentId}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {shipment.packingList.map((item, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>Product #{item.productId}</span>
+                        <span className="font-medium">
+                          Qty: {item.quantity}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-2 border-t border-gray-200">
+                    <div className="flex justify-between font-medium">
+                      <span>Total Items:</span>
+                      <span>
+                        {shipment.packingList.reduce(
+                          (sum, item) => sum + item.quantity,
+                          0
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>
