@@ -16,6 +16,7 @@ import {
 } from "./ui/table";
 import { supabase } from "../services/supabase";
 import { integratedSupplyChainService } from "../services/integratedSupplyChainService";
+import { mintingService } from "../services/mintingService";
 import {
   Package,
   Layers,
@@ -114,43 +115,41 @@ const NFTMinting = () => {
     try {
       setMinting(selectedProduct);
 
-      // Mint NFT using integrated service
-      const result = await integratedSupplyChainService.mintProductNFT({
-        rfidHash: product.rfid_tag,
-        productName: product.product_name,
-        batchNumber: product.batch_no,
-        manufacturingDate: product.mfg_date,
-        expiryDate: product.exp_date,
-        manufacturer: account,
-      });
+      // Use enhanced minting service
+      const result = await mintingService.mintProduct(
+        {
+          id: product.id,
+          product_name: product.product_name,
+          rfid_tag: product.rfid_tag,
+          batch_no: product.batch_no,
+          mfg_date: product.mfg_date,
+          exp_date: product.exp_date,
+          owner_wallet: account,
+          current_location: product.current_location,
+        },
+        account
+      );
 
-      // Update product with token ID
-      const { error } = await supabase
-        .from("products")
-        .update({
-          token_id: result.tokenId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", selectedProduct);
+      if (result.success) {
+        // Set success state
+        setSuccess({
+          tokenId: result.tokenId || "",
+          txHash: result.transactionHash || `0x${Date.now().toString(16)}`,
+          productName: product.product_name,
+        });
 
-      if (error) throw error;
+        // Refresh data
+        await loadProducts();
+        await loadMintedTokens();
 
-      // Set success state
-      setSuccess({
-        tokenId: result.tokenId,
-        txHash: result.transactionHash || `0x${Date.now().toString(16)}`,
-        productName: product.product_name,
-      });
-
-      // Refresh data
-      await loadProducts();
-      await loadMintedTokens();
-
-      // Clear selection
-      setSelectedProduct("");
-    } catch (error) {
+        // Clear selection
+        setSelectedProduct("");
+      } else {
+        throw new Error(result.error || "Minting failed");
+      }
+    } catch (error: any) {
       console.error("Error minting NFT:", error);
-      alert("Failed to mint NFT. Please try again.");
+      alert(`Failed to mint NFT: ${error.message || "Please try again"}`);
     } finally {
       setMinting(null);
     }

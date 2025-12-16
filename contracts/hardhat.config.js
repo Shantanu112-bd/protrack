@@ -8,7 +8,7 @@ module.exports = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1, // Lower runs = smaller bytecode size
       },
       viaIR: true,
     },
@@ -22,6 +22,8 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 1337,
+      blockGasLimit: 30000000, // Increase gas limit for large contracts
+      allowUnlimitedContractSize: true, // Allow contracts larger than 24KB
     },
     localhost: {
       url: "http://127.0.0.1:8545",
@@ -29,6 +31,8 @@ module.exports = {
       accounts: {
         mnemonic: "test test test test test test test test test test test junk",
       },
+      blockGasLimit: 30000000,
+      allowUnlimitedContractSize: true,
     },
   },
 };

@@ -112,14 +112,29 @@ export const switchNetwork = async (chainId: number): Promise<void> => {
         );
       }
     } else {
+      // User rejected the request or other error occurred
       console.error("Failed to switch network:", switchError);
-      throw new Error(
-        `Failed to switch network: ${
-          switchError instanceof Error
-            ? switchError.message
-            : "Unknown error occurred"
-        }`
-      );
+
+      // Check if user rejected the request
+      if (switchError instanceof Error) {
+        if (
+          switchError.message.includes("User rejected") ||
+          switchError.message.includes("User denied") ||
+          ("code" in switchError && (switchError as any).code === 4001)
+        ) {
+          // User rejected - don't throw error, just log it
+          console.log("User rejected network switch");
+          return; // Silently return without error
+        }
+      }
+
+      // For other errors, provide a helpful message
+      const errorMessage =
+        switchError instanceof Error
+          ? switchError.message
+          : "Please try again or switch network manually in MetaMask";
+
+      throw new Error(`Failed to switch network: ${errorMessage}`);
     }
   }
 };

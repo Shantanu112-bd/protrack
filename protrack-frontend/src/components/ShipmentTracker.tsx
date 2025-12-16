@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { api, Shipment } from "../services/api";
+import { trackingService } from "../services/supabase";
+import { fallbackService } from "../services/fallbackService";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -9,6 +10,27 @@ import { Loader, AlertCircle, CheckCircle, MapPin, Clock } from "lucide-react";
 
 interface ShipmentTrackerProps {
   productId?: string;
+}
+
+// Supabase shipment interface
+interface Shipment {
+  id: string;
+  product_id: string;
+  from_party?: string;
+  to_party?: string;
+  status: "requested" | "approved" | "shipped" | "delivered" | "confirmed";
+  destination?: string;
+  origin?: string;
+  current_location?: string;
+  created_at: string;
+  updated_at: string;
+  products?: {
+    id: string;
+    product_name: string;
+    rfid_tag: string;
+    batch_no: string;
+    current_location: string;
+  };
 }
 
 const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
@@ -29,14 +51,22 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
 
   const loadShipments = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await api.getShipments();
-      if (response.success && response.data) {
-        setShipments(response.data.shipments || []);
-      }
+      const data = await trackingService.getAllShipments();
+      // Map Supabase data to component format
+      const mappedShipments = (data || []).map((shipment: any) => ({
+        ...shipment,
+        origin: shipment.from_party || shipment.products?.current_location || "Unknown",
+        current_location: shipment.products?.current_location || shipment.destination || "Unknown",
+      }));
+      setShipments(mappedShipments);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load shipments");
       console.error("Error loading shipments:", err);
+      // Try fallback
+      const fallbackShipments = fallbackService.getMockShipments();
+      setShipments(fallbackShipments as any);
     } finally {
       setLoading(false);
     }
@@ -50,20 +80,27 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
     }
 
     setLoading(true);
+    setError(null);
     try {
-      const response = await api.createShipment({
+      const shipmentData = {
         product_id: newShipment.product_id,
-        origin: newShipment.origin,
         destination: newShipment.destination,
-        status: "pending",
-        current_location: newShipment.origin,
-      });
+        from_party: newShipment.origin, // Map origin to from_party
+        status: "requested" as const,
+      };
 
-      if (response.success && response.data) {
-        setShipments((prev) => [...prev, response.data]);
-        setNewShipment({ product_id: productId || "", origin: "", destination: "" });
-        setShowForm(false);
-      }
+      const createdShipment = await trackingService.createShipment(shipmentData);
+      
+      // Map response to component format
+      const mappedShipment = {
+        ...createdShipment,
+        origin: newShipment.origin,
+        current_location: newShipment.origin,
+      };
+
+      setShipments((prev) => [mappedShipment, ...prev]);
+      setNewShipment({ product_id: productId || "", origin: "", destination: "" });
+      setShowForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create shipment");
       console.error("Error creating shipment:", err);
@@ -74,13 +111,19 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
 
   const handleUpdateStatus = async (shipmentId: string, newStatus: string) => {
     try {
-      const response = await api.updateShipmentStatus(shipmentId, newStatus);
-      if (response.success && response.data) {
-        setShipments((prev) =>
-          prev.map((s) => (s.id === shipmentId ? response.data : s))
-        );
-        setSelectedShipment(response.data);
-      }
+      setError(null);
+      // Map status values to Supabase format
+      const supabaseStatus = newStatus === "in_transit" ? "shipped" : 
+                            newStatus === "delivered" ? "delivered" : 
+                            newStatus === "pending" ? "requested" : 
+                            newStatus as any;
+
+      const updatedShipment = await trackingService.updateShipmentStatus(shipmentId, supabaseStatus);
+      
+      setShipments((prev) =>
+        prev.map((s) => (s.id === shipmentId ? { ...s, ...updatedShipment } : s))
+      );
+      setSelectedShipment({ ...selectedShipment, ...updatedShipment } as Shipment);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update status");
       console.error("Error updating status:", err);
@@ -90,14 +133,22 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
+      case "requested":
         return "bg-yellow-100 text-yellow-800";
       case "in_transit":
+      case "shipped":
+      case "approved":
         return "bg-blue-100 text-blue-800";
       case "delivered":
+      case "confirmed":
         return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const formatStatus = (status: string) => {
+    return status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   return (
@@ -213,7 +264,7 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
                             {shipment.origin} → {shipment.destination}
                           </span>
                           <Badge className={getStatusColor(shipment.status)}>
-                            {shipment.status.replace("_", " ")}
+                            {formatStatus(shipment.status)}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -230,7 +281,7 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
                       <div className="mt-4 pt-4 border-t space-y-3">
                         <p className="font-medium text-sm">Update Status:</p>
                         <div className="flex gap-2">
-                          {["pending", "in_transit", "delivered"].map((status) => (
+                          {["requested", "shipped", "delivered"].map((status) => (
                             <Button
                               key={status}
                               onClick={() => handleUpdateStatus(shipment.id, status)}
@@ -240,7 +291,7 @@ const ShipmentTracker: React.FC<ShipmentTrackerProps> = ({ productId }) => {
                               size="sm"
                               disabled={loading}
                             >
-                              {status.replace("_", " ")}
+                              {formatStatus(status)}
                             </Button>
                           ))}
                         </div>

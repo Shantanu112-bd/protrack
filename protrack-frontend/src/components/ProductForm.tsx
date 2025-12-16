@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { api } from "../services/api";
+import { trackingService } from "../services/supabase";
+import { fallbackService } from "../services/fallbackService";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -40,22 +41,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ onSuccess, onClose }) => {
         throw new Error("Name and manufacturer are required");
       }
 
-      const response = await api.createProduct({
-        name: formData.name,
-        description: formData.description,
-        manufacturer: formData.manufacturer,
-        batch_number: formData.batch_number || `BATCH-${Date.now()}`,
-      });
+      // Generate RFID tag if not provided (using timestamp-based approach)
+      const rfidTag = `RFID-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const batchNo = formData.batch_number || `BATCH-${Date.now()}`;
 
-      if (!response.success || !response.data) {
-        throw new Error(response.message || "Failed to create product");
-      }
+      // Map form data to Supabase product schema
+      const productData = {
+        rfid_tag: rfidTag,
+        product_name: formData.name,
+        batch_no: batchNo,
+        status: "manufactured", // Default status
+        current_location: formData.manufacturer, // Use manufacturer as initial location
+        // Optional fields that can be added later
+        mfg_date: new Date().toISOString().split('T')[0], // Today's date
+        metadata: {
+          description: formData.description,
+          manufacturer: formData.manufacturer,
+        },
+      };
+
+      const createdProduct = await trackingService.createProduct(productData);
 
       setSuccess(true);
       setFormData({ name: "", description: "", manufacturer: "", batch_number: "" });
 
       if (onSuccess) {
-        onSuccess(response.data.id);
+        onSuccess(createdProduct.id);
       }
 
       setTimeout(() => {

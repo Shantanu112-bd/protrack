@@ -92,12 +92,18 @@ export const Web3ContextProvider: React.FC<{ children: React.ReactNode }> = ({
           // Use our enhanced network switching utility
           await switchNetwork(CHAIN_ID);
         } catch (switchError: unknown) {
-          console.error("Failed to switch network:", switchError);
-          setError(
-            switchError instanceof Error
-              ? switchError.message
-              : "Please switch to the correct network in your wallet"
-          );
+          // Only log error, don't set error state for network switching
+          // This prevents annoying error messages when user rejects network switch
+          console.log("Network switch not completed:", switchError);
+
+          // Only set error if it's not a user rejection
+          if (
+            switchError instanceof Error &&
+            !switchError.message.includes("User rejected") &&
+            !switchError.message.includes("User denied")
+          ) {
+            setError("Please switch to the correct network in your wallet");
+          }
         }
       })();
     }

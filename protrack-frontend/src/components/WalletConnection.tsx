@@ -35,12 +35,20 @@ const WalletConnection: React.FC = () => {
 
   const handleSwitchNetwork = async () => {
     if (!isActive) return;
-    
+
     setIsSwitchingNetwork(true);
     try {
       await switchNetwork(CHAIN_ID);
     } catch (error) {
-      console.error("Failed to switch network:", error);
+      // Only log error, don't show alert for user rejections
+      if (
+        error instanceof Error &&
+        !error.message.includes("User rejected") &&
+        !error.message.includes("User denied")
+      ) {
+        console.error("Failed to switch network:", error);
+        // Optionally show a non-intrusive notification
+      }
     } finally {
       setIsSwitchingNetwork(false);
     }

@@ -18,6 +18,7 @@ import { dashboardService } from "../services/dashboardService";
 import { supabase, trackingService } from "../services/supabase";
 import { integratedSupplyChainService } from "../services/integratedSupplyChainService";
 import { fallbackService } from "../services/fallbackService";
+import { mintingService } from "../services/mintingService";
 import { ProductInsert } from "../types/database-override";
 import {
   Package,
@@ -296,7 +297,7 @@ const Products = () => {
     setShowProductModal(true);
   };
 
-  // Mint product as NFT/SBT
+  // Mint product as NFT/SBT using enhanced minting service
   const mintProduct = async (product: Product) => {
     if (!isActive || !account) {
       alert("Please connect your wallet first");
@@ -306,29 +307,43 @@ const Products = () => {
     try {
       setMinting(product.id);
 
-      // Create product with blockchain integration
-      const result = await dashboardService.createProduct({
-        rfid_tag: product.rfid_tag,
-        product_name: product.product_name,
-        batch_no: product.batch_no,
-        mfg_date: product.mfg_date,
-        exp_date: product.exp_date,
-        manufacturer_wallet: account,
-      });
-
-      // Update local state
-      setProducts(
-        products.map((p) =>
-          p.id === product.id
-            ? { ...p, isTokenized: true, token_id: result.token_id }
-            : p
-        )
+      // Use enhanced minting service
+      const result = await mintingService.mintProduct(
+        {
+          id: product.id,
+          product_name: product.product_name || "",
+          rfid_tag: product.rfid_tag,
+          batch_no: product.batch_no || product.batch_id || "",
+          mfg_date: product.mfg_date || "",
+          exp_date: product.exp_date || product.expiry_date || "",
+          owner_wallet: account,
+          current_location: product.current_location,
+        },
+        account
       );
 
-      alert("Product minted successfully!");
-    } catch (error) {
+      if (result.success) {
+        // Update local state
+        setProducts(
+          products.map((p) =>
+            p.id === product.id
+              ? { ...p, isTokenized: true, token_id: result.tokenId }
+              : p
+          )
+        );
+
+        alert(
+          `Product minted successfully!\nToken ID: ${result.tokenId}\nTransaction: ${result.transactionHash}`
+        );
+
+        // Refresh products to get updated data
+        await loadProducts();
+      } else {
+        throw new Error(result.error || "Minting failed");
+      }
+    } catch (error: any) {
       console.error("Error minting product:", error);
-      alert("Failed to mint product. Please try again.");
+      alert(`Failed to mint product: ${error.message || "Please try again"}`);
     } finally {
       setMinting(null);
     }

@@ -8,7 +8,7 @@ const hre = require("hardhat");
 
 async function main() {
   // Deploy the unified ProTrack contract
-  const ProTrack = await hre.ethers.getContractFactory("ProTrack");
+  const ProTrack = await hre.ethers.getContractFactory("UnifiedProTrack");
   const proTrack = await ProTrack.deploy();
   await proTrack.waitForDeployment();
   const proTrackAddress = await proTrack.getAddress();
