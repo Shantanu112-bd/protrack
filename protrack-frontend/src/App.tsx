@@ -10,7 +10,7 @@ import "./App.css";
 const Dashboard = lazy(() => import("./components/Dashboard"));
 const Products = lazy(() => import("./components/Products"));
 const Shipments = lazy(() => import("./components/Shipments"));
-const NFTMinting = lazy(() => import("./components/NFTProductCreation"));
+const NFTMinting = lazy(() => import("./components/NFTMinting"));
 const Scan = lazy(() => import("./components/ScanRFID"));
 const IoTMonitoring = lazy(() => import("./components/IoTDashboard"));
 const Analytics = lazy(() => import("./components/SupplyChainAnalytics"));
@@ -29,11 +29,10 @@ function App() {
         <main className="flex-1 overflow-y-auto p-4 bg-gray-100">
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
+              <Route index element={<Dashboard />} />
               <Route path="products" element={<Products />} />
               <Route path="shipments" element={<Shipments />} />
-              <Route path="mint" element={<NFTMinting isDark={false} />} />
+              <Route path="mint" element={<NFTMinting />} />
               <Route path="scan" element={<Scan />} />
               <Route path="iot" element={<IoTMonitoring />} />
               <Route path="sensors" element={<SensorDashboard />} />
@@ -44,7 +43,7 @@ function App() {
               <Route path="notifications" element={<Notifications />} />
               <Route path="profile" element={<UserProfile />} />
               <Route path="network-test" element={<NetworkTest />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
         </main>

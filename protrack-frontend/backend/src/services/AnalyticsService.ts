@@ -44,8 +44,8 @@ export interface UserAnalytics {
   totalEvents: number;
   activityTimeline: Array<{
     date: string;
+    activeUsers: number;
     events: number;
-    products: number;
   }>;
   mostActiveProducts: Array<{
     productId: string;
@@ -76,7 +76,13 @@ export class AnalyticsService {
         timestamp: new Date().toISOString()
       };
 
-      await this.supabaseService.trackEvent(event);
+      await this.supabaseService.trackEvent({
+        event_type: event.eventType,
+        user_id: event.userId,
+        product_id: event.productId,
+        metadata: event.metadata,
+        timestamp: event.timestamp
+      });
       logger.debug(`📊 Event tracked: ${event.eventType}`);
     } catch (error) {
       logger.error('Error tracking analytics event:', error);
@@ -303,7 +309,10 @@ export class AnalyticsService {
       const userEvents = await this.supabaseService.getUserEvents(userId);
       const userProducts = await this.supabaseService.getUserProducts(userId);
 
-      const activityTimeline = await this.supabaseService.getUserActivityTimeline(userId);
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 30);
+      const activityTimeline = await this.supabaseService.getUserActivityTimeline(startDate, endDate);
       const mostActiveProducts = await this.supabaseService.getUserMostActiveProducts(userId);
 
       return {

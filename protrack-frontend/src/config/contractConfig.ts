@@ -1,4 +1,4 @@
-import contractsData from './contracts.json';
+import contractsData from "./contracts.json";
 
 export interface ContractConfig {
   address: string;
@@ -30,10 +30,13 @@ export interface ContractsConfig {
 }
 
 // Load the deployed contract configuration
-export const contractsConfig: ContractsConfig = contractsData as ContractsConfig;
+export const contractsConfig: ContractsConfig =
+  contractsData as ContractsConfig;
 
 // Export individual contract addresses for easy access
 export const CONTRACT_ADDRESSES = {
+  // ProTrack.sol is the main unified contract (using ProTrackSupplyChain address)
+  PROTRACK: contractsConfig.contracts.ProTrackSupplyChain.address,
   SUPPLY_CHAIN: contractsConfig.contracts.ProTrackSupplyChain.address,
   ORACLE: contractsConfig.contracts.ProTrackOracle.address,
   MPC_WALLET: contractsConfig.contracts.ProTrackMPCWallet.address,
@@ -48,7 +51,9 @@ export const NETWORK_CONFIG = contractsConfig.network;
 export const DEMO_CONFIG = contractsConfig.demo;
 
 // Helper function to get contract address by name
-export function getContractAddress(contractName: keyof typeof contractsConfig.contracts): string {
+export function getContractAddress(
+  contractName: keyof typeof contractsConfig.contracts
+): string {
   return contractsConfig.contracts[contractName].address;
 }
 

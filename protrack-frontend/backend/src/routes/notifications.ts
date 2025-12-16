@@ -52,7 +52,7 @@ router.patch('/:notificationId/read', asyncHandler(async (req: Request, res: Res
     const success = await notificationService.markNotificationAsRead(notificationId, userId);
     
     if (!success) {
-      throw new BadRequestError('Failed to mark notification as read');
+      throw BadRequestError('Failed to mark notification as read');
     }
 
     res.json({
@@ -73,7 +73,7 @@ router.patch('/read-all', asyncHandler(async (req: Request, res: Response) => {
     const success = await notificationService.markAllNotificationsAsRead(userId);
     
     if (!success) {
-      throw new BadRequestError('Failed to mark all notifications as read');
+      throw BadRequestError('Failed to mark all notifications as read');
     }
 
     res.json({
@@ -95,7 +95,7 @@ router.delete('/:notificationId', asyncHandler(async (req: Request, res: Respons
     const success = await notificationService.deleteNotification(notificationId, userId);
     
     if (!success) {
-      throw new BadRequestError('Failed to delete notification');
+      throw BadRequestError('Failed to delete notification');
     }
 
     res.json({
@@ -130,12 +130,12 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   const { userId, type, title, message, metadata } = req.body;
 
   if (!userId || !type || !title || !message) {
-    throw new BadRequestError('User ID, type, title, and message are required');
+    throw BadRequestError('User ID, type, title, and message are required');
   }
 
   const validTypes = ['alert', 'info', 'warning', 'success'];
   if (!validTypes.includes(type)) {
-    throw new BadRequestError('Invalid notification type');
+    throw BadRequestError('Invalid notification type');
   }
 
   try {
@@ -148,7 +148,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
     });
 
     if (!notificationId) {
-      throw new BadRequestError('Failed to create notification');
+      throw BadRequestError('Failed to create notification');
     }
 
     res.status(201).json({

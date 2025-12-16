@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { SupabaseService } from '../services/SupabaseService';
 import { BlockchainService } from '../services/BlockchainService';
-import { IPFSService } from '../services/IPFSService';
+import { IPFSService } from '../services/ipfsService';
 import { asyncHandler, BadRequestError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 import { requireRole } from '../middleware/auth';
 import { logger } from '../utils/logger';
@@ -31,7 +31,7 @@ router.post('/', requireRole(['manufacturer', 'admin']), asyncHandler(async (req
   const { name, sku, batch_id, category, metadata } = req.body;
 
   if (!name || !sku || !batch_id || !category) {
-    throw new BadRequestError('Name, SKU, batch ID, and category are required');
+    throw BadRequestError('Name, SKU, batch ID, and category are required');
   }
 
   try {
@@ -46,7 +46,7 @@ router.post('/', requireRole(['manufacturer', 'admin']), asyncHandler(async (req
       });
       
       if (ipfsResult) {
-        ipfsMetadataHash = ipfsResult.hash;
+        ipfsMetadataHash = ipfsResult;
       }
     }
 
@@ -63,15 +63,17 @@ router.post('/', requireRole(['manufacturer', 'admin']), asyncHandler(async (req
     });
 
     if (!productId) {
-      throw new BadRequestError('Failed to create product');
+      throw BadRequestError('Failed to create product');
     }
 
     // Create product on blockchain
     let blockchainTokenId = null;
+    let blockchainTxHash = null;
     if (blockchainService.isConnected()) {
       const blockchainResult = await blockchainService.createProduct(name, sku, batch_id);
       if (blockchainResult.success) {
         blockchainTokenId = 1; // In a real implementation, you'd get this from the blockchain
+        blockchainTxHash = blockchainResult.hash;
       }
     }
 
@@ -88,7 +90,7 @@ router.post('/', requireRole(['manufacturer', 'admin']), asyncHandler(async (req
       to_user_id: userId,
       location: 'Manufacturing Facility',
       timestamp: new Date().toISOString(),
-      metadata: { blockchain_tx_hash: blockchainResult?.hash }
+      metadata: { blockchain_tx_hash: blockchainTxHash }
     });
 
     logger.info(`Product created: ${productId} by user ${userId}`);
@@ -157,7 +159,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   try {
     const product = await supabaseService.getProduct(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw NotFoundError('Product not found');
     }
 
     // Get product history
@@ -201,17 +203,17 @@ router.put('/:id', requireRole(['manufacturer', 'packager', 'wholesaler', 'selle
   try {
     const product = await supabaseService.getProduct(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw NotFoundError('Product not found');
     }
 
     // Check if user has permission to update this product
-    if (product.current_owner_id !== userId && !(req as any).user.role === 'admin') {
-      throw new ForbiddenError('You do not have permission to update this product');
+    if (product.current_owner_id !== userId && (req as any).user.role !== 'admin') {
+      throw ForbiddenError('You do not have permission to update this product');
     }
 
     const success = await supabaseService.updateProduct(id, updates);
     if (!success) {
-      throw new BadRequestError('Failed to update product');
+      throw BadRequestError('Failed to update product');
     }
 
     logger.info(`Product updated: ${id} by user ${userId}`);
@@ -233,18 +235,18 @@ router.post('/:id/transfer', requireRole(['manufacturer', 'packager', 'wholesale
   const { to_user_id, location, metadata } = req.body;
 
   if (!to_user_id) {
-    throw new BadRequestError('Recipient user ID is required');
+    throw BadRequestError('Recipient user ID is required');
   }
 
   try {
     const product = await supabaseService.getProduct(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw NotFoundError('Product not found');
     }
 
     // Check if user has permission to transfer this product
-    if (product.current_owner_id !== userId && !(req as any).user.role === 'admin') {
-      throw new ForbiddenError('You do not have permission to transfer this product');
+    if (product.current_owner_id !== userId && (req as any).user.role !== 'admin') {
+      throw ForbiddenError('You do not have permission to transfer this product');
     }
 
     // Update product ownership
@@ -254,7 +256,7 @@ router.post('/:id/transfer', requireRole(['manufacturer', 'packager', 'wholesale
     });
 
     if (!success) {
-      throw new BadRequestError('Failed to transfer product');
+      throw BadRequestError('Failed to transfer product');
     }
 
     // Add transfer event
@@ -295,24 +297,24 @@ router.patch('/:id/status', requireRole(['manufacturer', 'packager', 'wholesaler
   const { status, location, metadata } = req.body;
 
   if (!status) {
-    throw new BadRequestError('Status is required');
+    throw BadRequestError('Status is required');
   }
 
   const validStatuses = ['manufactured', 'in_transit', 'delivered', 'recalled'];
   if (!validStatuses.includes(status)) {
-    throw new BadRequestError('Invalid status');
+    throw BadRequestError('Invalid status');
   }
 
   try {
     const product = await supabaseService.getProduct(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw NotFoundError('Product not found');
     }
 
     // Update product status
     const success = await supabaseService.updateProduct(id, { status });
     if (!success) {
-      throw new BadRequestError('Failed to update product status');
+      throw BadRequestError('Failed to update product status');
     }
 
     // Add status change event
@@ -373,18 +375,18 @@ router.post('/:id/events', requireRole(['manufacturer', 'packager', 'wholesaler'
   const { event_type, location, metadata } = req.body;
 
   if (!event_type) {
-    throw new BadRequestError('Event type is required');
+    throw BadRequestError('Event type is required');
   }
 
   const validEventTypes = ['manufacture', 'transfer', 'quality_check', 'delivery', 'recall'];
   if (!validEventTypes.includes(event_type)) {
-    throw new BadRequestError('Invalid event type');
+    throw BadRequestError('Invalid event type');
   }
 
   try {
     const product = await supabaseService.getProduct(id);
     if (!product) {
-      throw new NotFoundError('Product not found');
+      throw NotFoundError('Product not found');
     }
 
     // Add supply chain event
@@ -399,7 +401,7 @@ router.post('/:id/events', requireRole(['manufacturer', 'packager', 'wholesaler'
     });
 
     if (!eventId) {
-      throw new BadRequestError('Failed to add supply chain event');
+      throw BadRequestError('Failed to add supply chain event');
     }
 
     logger.info(`Supply chain event added: ${eventId} for product ${id}`);

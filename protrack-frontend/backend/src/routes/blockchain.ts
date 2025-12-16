@@ -53,7 +53,7 @@ router.get('/balance/:address', asyncHandler(async (req: Request, res: Response)
   const { address } = req.params;
 
   if (!address) {
-    throw new BadRequestError('Address is required');
+    throw BadRequestError('Address is required');
   }
 
   try {
@@ -78,14 +78,14 @@ router.get('/transaction/:txHash', asyncHandler(async (req: Request, res: Respon
   const { txHash } = req.params;
 
   if (!txHash) {
-    throw new BadRequestError('Transaction hash is required');
+    throw BadRequestError('Transaction hash is required');
   }
 
   try {
     const receipt = await blockchainService.getTransactionReceipt(txHash);
     
     if (!receipt) {
-      throw new NotFoundError('Transaction not found');
+      throw NotFoundError('Transaction not found');
     }
 
     res.json({
@@ -150,14 +150,14 @@ router.get('/product/:tokenId', asyncHandler(async (req: Request, res: Response)
   const { tokenId } = req.params;
 
   if (!tokenId) {
-    throw new BadRequestError('Token ID is required');
+    throw BadRequestError('Token ID is required');
   }
 
   try {
     const productInfo = await blockchainService.getProductInfo(parseInt(tokenId));
     
     if (!productInfo) {
-      throw new NotFoundError('Product not found on blockchain');
+      throw NotFoundError('Product not found on blockchain');
     }
 
     res.json({
@@ -178,7 +178,7 @@ router.get('/product/:tokenId/history', asyncHandler(async (req: Request, res: R
   const { tokenId } = req.params;
 
   if (!tokenId) {
-    throw new BadRequestError('Token ID is required');
+    throw BadRequestError('Token ID is required');
   }
 
   try {
@@ -203,7 +203,7 @@ router.get('/iot/:deviceId', asyncHandler(async (req: Request, res: Response) =>
   const { deviceId } = req.params;
 
   if (!deviceId) {
-    throw new BadRequestError('Device ID is required');
+    throw BadRequestError('Device ID is required');
   }
 
   try {
@@ -229,19 +229,19 @@ router.get('/network/stats', asyncHandler(async (req: Request, res: Response) =>
     const provider = blockchainService.getProvider();
     
     if (!provider) {
-      throw new BadRequestError('Blockchain provider not available');
+      throw BadRequestError('Blockchain provider not available');
     }
 
-    const [blockNumber, gasPrice] = await Promise.all([
+    const [blockNumber, feeData] = await Promise.all([
       provider.getBlockNumber(),
-      provider.getGasPrice()
+      provider.getFeeData()
     ]);
 
     res.json({
       success: true,
       data: {
         blockNumber,
-        gasPrice: gasPrice.toString(),
+        gasPrice: feeData?.gasPrice?.toString() || '0',
         timestamp: new Date().toISOString()
       }
     });
@@ -256,14 +256,14 @@ router.post('/verify', asyncHandler(async (req: Request, res: Response) => {
   const { txHash, expectedResult } = req.body;
 
   if (!txHash) {
-    throw new BadRequestError('Transaction hash is required');
+    throw BadRequestError('Transaction hash is required');
   }
 
   try {
     const receipt = await blockchainService.getTransactionReceipt(txHash);
     
     if (!receipt) {
-      throw new NotFoundError('Transaction not found');
+      throw NotFoundError('Transaction not found');
     }
 
     const isSuccessful = receipt.status === 1;

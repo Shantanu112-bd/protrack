@@ -177,7 +177,8 @@ const SupplyChainLifecycle: React.FC = () => {
       // Use the actual method from integratedSupplyChainService
       const result = await supplyChainService.processIoTData(
         iotData,
-        "SENSOR-001"
+        "SENSOR-001",
+        productData.tokenId // Add tokenId parameter
       );
 
       if (result.success) {

@@ -28,6 +28,7 @@ if (rootElement) {
               <Route path="/" element={<LandingPage />} />
               <Route path="/signin" element={<SignInPage />} />
               <Route path="/integrated-demo" element={<IntegratedDemo />} />
+              <Route path="/dashboard" element={<App />} />
               <Route path="/dashboard/*" element={<App />} />
               <Route path="/health" element={<HealthCheck />} />
               {/* Redirect any unknown routes to landing page */}

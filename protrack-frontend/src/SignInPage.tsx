@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWeb3 } from "./contexts/web3ContextTypes";
 import WalletConnection from "./components/WalletConnection";
@@ -13,17 +13,70 @@ type UserType =
 const SignInPage: React.FC = () => {
   const { isActive, account } = useWeb3();
   const [userType, setUserType] = useState<UserType>("consumer");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const authAttemptedRef = useRef<string | null>(null);
 
-  // Automatically navigate to dashboard when wallet is connected
+  // Authenticate with backend when wallet is connected
   useEffect(() => {
-    if (isActive && account) {
-      const timer = setTimeout(() => {
-        navigate("/dashboard/");
-      }, 1000); // Small delay to show the connected state
-      return () => clearTimeout(timer);
-    }
-  }, [isActive, account, navigate]);
+    const attemptAuth = async () => {
+      if (!isActive || !account) return;
+      
+      // Prevent duplicate auth attempts
+      if (authAttemptedRef.current === account) {
+        console.log("✓ Auth already attempted for this account");
+        return;
+      }
+
+      console.log("🔐 Starting authentication for:", account);
+      setIsAuthenticating(true);
+      setAuthError(null);
+      authAttemptedRef.current = account;
+      
+      try {
+        const response = await fetch("http://localhost:54112/api/v1/auth/wallet-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet_address: account, role: userType }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Auth failed");
+        }
+
+        const data = await response.json();
+        console.log("✅ Auth successful:", data);
+        
+        if (data.token) {
+          localStorage.setItem("authToken", data.token);
+        }
+        localStorage.setItem("userRole", userType);
+        localStorage.setItem("walletAddress", account);
+
+        console.log("🚀 About to navigate to /dashboard");
+        console.log("Navigate function exists:", typeof navigate);
+        console.log("Current location before nav:", window.location.pathname);
+        
+        setIsAuthenticating(false);
+        
+        // Use setTimeout to ensure state update completes first
+        setTimeout(() => {
+          console.log("⏱️ Timeout executed, calling navigate");
+          navigate("/dashboard");
+          console.log("After navigate call, location:", window.location.pathname);
+        }, 0);
+      } catch (err) {
+        console.error("❌ Auth error:", err);
+        setAuthError(err instanceof Error ? err.message : "Authentication failed");
+        setIsAuthenticating(false);
+        authAttemptedRef.current = null;
+      }
+    };
+
+    attemptAuth();
+  }, [isActive, account, userType, navigate]);
 
   const userTypeOptions: {
     id: UserType;
@@ -186,12 +239,32 @@ const SignInPage: React.FC = () => {
                       <p className="text-gray-400 text-sm mb-4">
                         {account?.slice(0, 6)}...{account?.slice(-4)}
                       </p>
-                      <button
-                        onClick={handleSignIn}
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02]"
-                      >
-                        Enter Dashboard
-                      </button>
+                      {isAuthenticating && (
+                        <div className="mb-4">
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-purple-500 mr-2"></div>
+                            <p className="text-purple-400 font-medium">Authenticating...</p>
+                          </div>
+                        </div>
+                      )}
+                      {authError && (
+                        <div className="mb-4 p-4 bg-red-900/30 rounded-lg border border-red-800/50">
+                          <p className="text-red-400 text-sm">{authError}</p>
+                        </div>
+                      )}
+                      {isActive && !isAuthenticating && (
+                        <button
+                          onClick={() => {
+                            console.log("Manual sign-in button clicked");
+                            localStorage.setItem("userRole", userType);
+                            localStorage.setItem("walletAddress", account);
+                            navigate("/dashboard");
+                          }}
+                          className="mt-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all"
+                        >
+                          Continue to Dashboard
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>

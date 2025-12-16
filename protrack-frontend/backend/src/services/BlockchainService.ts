@@ -230,6 +230,38 @@ export class BlockchainService {
     }
   }
 
+  async updateProductStatus(tokenId: number, status: number): Promise<TransactionResult> {
+    try {
+      const contract = this.getContract('ProTrackSupplyChain');
+      if (!contract) {
+        throw new Error('Supply chain contract not available');
+      }
+
+      const tx = await contract.updateProductStatus(tokenId, status, {
+        gasLimit: config.blockchain.gasLimit,
+        gasPrice: config.blockchain.gasPrice
+      });
+
+      logger.info(`📊 Product status update transaction sent: ${tx.hash}`);
+      
+      const receipt = await tx.wait();
+      logger.info(`✅ Product status updated successfully: ${tx.hash}`);
+
+      return {
+        hash: tx.hash,
+        receipt,
+        success: true
+      };
+    } catch (error) {
+      logger.error('Error updating product status:', error);
+      return {
+        hash: '',
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
   async addSupplyChainEvent(tokenId: number, eventType: number, location: string, metadata: string): Promise<TransactionResult> {
     try {
       const contract = this.getContract('ProTrackSupplyChain');

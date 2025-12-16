@@ -21,14 +21,16 @@
     "health": "npx tsx src/test-health.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.87.3",
     "@web3-react/core": "^8.2.3",
     "@web3-react/injected-connector": "^6.0.7",
     "@web3-react/metamask": "^8.2.4",
+    "@zxing/browser": "^0.1.5",
     "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "date-fns": "^3.0.6",
+    "dotenv": "^17.2.3",
     "ethers": "^6.13.4",
     "framer-motion": "^10.16.16",
     "i18next": "^23.7.8",

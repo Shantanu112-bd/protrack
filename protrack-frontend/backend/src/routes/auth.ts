@@ -23,18 +23,18 @@ router.post('/register', authRateLimiterMiddleware, asyncHandler(async (req: Req
 
   // Validate input
   if (!email || !password || !role) {
-    throw new BadRequestError('Email, password, and role are required');
+    throw BadRequestError('Email, password, and role are required');
   }
 
   // Validate role
   const validRoles = ['manufacturer', 'packager', 'wholesaler', 'seller', 'inspector', 'customer', 'admin'];
   if (!validRoles.includes(role)) {
-    throw new BadRequestError('Invalid role');
+    throw BadRequestError('Invalid role');
   }
 
   // Validate password strength
   if (password.length < 8) {
-    throw new BadRequestError('Password must be at least 8 characters long');
+    throw BadRequestError('Password must be at least 8 characters long');
   }
 
   try {
@@ -49,11 +49,11 @@ router.post('/register', authRateLimiterMiddleware, asyncHandler(async (req: Req
 
     if (error) {
       logger.error('Registration error:', error);
-      throw new BadRequestError(error.message || 'Registration failed');
+      throw BadRequestError(error.message || 'Registration failed');
     }
 
     if (!user) {
-      throw new BadRequestError('Failed to create user');
+      throw BadRequestError('Failed to create user');
     }
 
     // Generate tokens
@@ -94,29 +94,26 @@ router.post('/login', authRateLimiterMiddleware, asyncHandler(async (req: Reques
   const { email, password } = req.body;
 
   if (!email || !password) {
-    throw new BadRequestError('Email and password are required');
+    throw BadRequestError('Email and password are required');
   }
 
   try {
     // Authenticate with Supabase
-    const { data: authData, error: authError } = await supabaseService.client.auth.signInWithPassword({
-      email,
-      password
-    });
+    const { data: authData, error: authError } = await supabaseService.signInWithPassword(email, password);
 
     if (authError) {
       logger.warn(`Login failed for ${email}:`, authError.message);
-      throw new UnauthorizedError('Invalid credentials');
+      throw UnauthorizedError('Invalid credentials');
     }
 
     if (!authData.user) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw UnauthorizedError('Invalid credentials');
     }
 
     // Get user profile
     const userProfile = await supabaseService.getUserProfile(authData.user.id);
     if (!userProfile) {
-      throw new UnauthorizedError('User profile not found');
+      throw UnauthorizedError('User profile not found');
     }
 
     // Generate tokens
@@ -157,20 +154,20 @@ router.post('/refresh', authRateLimiterMiddleware, asyncHandler(async (req: Requ
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    throw new BadRequestError('Refresh token is required');
+    throw BadRequestError('Refresh token is required');
   }
 
   try {
     const { userId, valid } = verifyRefreshToken(refreshToken);
     
     if (!valid || !userId) {
-      throw new UnauthorizedError('Invalid refresh token');
+      throw UnauthorizedError('Invalid refresh token');
     }
 
     // Get user profile
     const userProfile = await supabaseService.getUserProfile(userId);
     if (!userProfile) {
-      throw new UnauthorizedError('User profile not found');
+      throw UnauthorizedError('User profile not found');
     }
 
     // Generate new tokens
@@ -217,12 +214,12 @@ router.get('/profile', asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   
   if (!userId) {
-    throw new UnauthorizedError('User not authenticated');
+    throw UnauthorizedError('User not authenticated');
   }
 
   const userProfile = await supabaseService.getUserProfile(userId);
   if (!userProfile) {
-    throw new NotFoundError('User profile not found');
+    throw NotFoundError('User profile not found');
   }
 
   res.json({
@@ -247,7 +244,7 @@ router.put('/profile', asyncHandler(async (req: Request, res: Response) => {
   const { company_name, wallet_address } = req.body;
   
   if (!userId) {
-    throw new UnauthorizedError('User not authenticated');
+    throw UnauthorizedError('User not authenticated');
   }
 
   const updates: any = {};
@@ -255,12 +252,12 @@ router.put('/profile', asyncHandler(async (req: Request, res: Response) => {
   if (wallet_address !== undefined) updates.wallet_address = wallet_address;
 
   if (Object.keys(updates).length === 0) {
-    throw new BadRequestError('No valid fields to update');
+    throw BadRequestError('No valid fields to update');
   }
 
   const success = await supabaseService.updateUserProfile(userId, updates);
   if (!success) {
-    throw new BadRequestError('Failed to update profile');
+    throw BadRequestError('Failed to update profile');
   }
 
   // Get updated profile
@@ -289,26 +286,26 @@ router.post('/change-password', authRateLimiterMiddleware, asyncHandler(async (r
   const { currentPassword, newPassword } = req.body;
   
   if (!userId) {
-    throw new UnauthorizedError('User not authenticated');
+    throw UnauthorizedError('User not authenticated');
   }
 
   if (!currentPassword || !newPassword) {
-    throw new BadRequestError('Current password and new password are required');
+    throw BadRequestError('Current password and new password are required');
   }
 
   if (newPassword.length < 8) {
-    throw new BadRequestError('New password must be at least 8 characters long');
+    throw BadRequestError('New password must be at least 8 characters long');
   }
 
   try {
     // Update password in Supabase
-    const { error } = await supabaseService.client.auth.updateUser({
+    const { error } = await supabaseService.updateAuthUser({
       password: newPassword
     });
 
     if (error) {
       logger.error('Password change error:', error);
-      throw new BadRequestError('Failed to change password');
+      throw BadRequestError('Failed to change password');
     }
 
     logger.info(`Password changed for user: ${userId}`);
@@ -328,18 +325,18 @@ router.post('/verify-email', authRateLimiterMiddleware, asyncHandler(async (req:
   const { token } = req.body;
 
   if (!token) {
-    throw new BadRequestError('Verification token is required');
+    throw BadRequestError('Verification token is required');
   }
 
   try {
-    const { error } = await supabaseService.client.auth.verifyOtp({
+    const { error } = await supabaseService.verifyOtp({
       token_hash: token,
       type: 'email'
     });
 
     if (error) {
       logger.error('Email verification error:', error);
-      throw new BadRequestError('Invalid verification token');
+      throw BadRequestError('Invalid verification token');
     }
 
     res.json({
@@ -348,6 +345,92 @@ router.post('/verify-email', authRateLimiterMiddleware, asyncHandler(async (req:
     });
   } catch (error) {
     logger.error('Email verification error:', error);
+    throw error;
+  }
+}));
+
+// Wallet-based login endpoint
+router.post('/wallet-login', authRateLimiterMiddleware, asyncHandler(async (req: Request, res: Response) => {
+  const { wallet_address, role } = req.body;
+
+  // Validate input
+  if (!wallet_address) {
+    throw BadRequestError('Wallet address is required');
+  }
+
+  if (!role) {
+    throw BadRequestError('Role is required');
+  }
+
+  // Validate role
+  const validRoles = ['manufacturer', 'transporter', 'retailer', 'consumer', 'admin', 'packager', 'wholesaler', 'seller', 'inspector', 'customer'];
+  if (!validRoles.includes(role)) {
+    throw BadRequestError('Invalid role');
+  }
+
+  try {
+    // Check if user exists
+    const existingUser = await supabaseService.getUserByWallet(wallet_address);
+
+    if (existingUser) {
+      // User exists, log them in
+      const token = generateToken({
+        id: existingUser.id,
+        email: existingUser.email,
+        role: existingUser.role,
+        wallet_address: existingUser.wallet_address,
+      });
+      const refreshToken = generateRefreshToken(existingUser.id);
+
+      logger.info(`Wallet login successful: ${wallet_address}`);
+      
+      res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        refreshToken,
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          role: existingUser.role,
+          wallet_address: existingUser.wallet_address,
+        },
+      });
+    } else {
+      // Create new user with wallet address
+      const userId = await supabaseService.createUserWithWallet({
+        wallet_address,
+        role,
+      });
+
+      if (!userId) {
+        throw BadRequestError('Failed to create user account');
+      }
+
+      const token = generateToken({
+        id: userId,
+        email: `${wallet_address.toLowerCase()}@wallet.local`,
+        role,
+        wallet_address: wallet_address.toLowerCase(),
+      });
+      const refreshToken = generateRefreshToken(userId);
+
+      logger.info(`New wallet user created: ${wallet_address}`);
+
+      res.status(201).json({
+        success: true,
+        message: 'Account created and logged in successfully',
+        token,
+        refreshToken,
+        user: {
+          id: userId,
+          wallet_address,
+          role,
+        },
+      });
+    }
+  } catch (error) {
+    logger.error('Wallet login error:', error);
     throw error;
   }
 }));

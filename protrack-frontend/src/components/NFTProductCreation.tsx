@@ -1,9 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useWeb3 } from "../contexts/web3ContextTypes";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { LoadingSpinner } from "./ui/loading-spinner";
+import { supabase } from "../services/supabase";
+import { dashboardService } from "../services/dashboardService";
+import { integratedSupplyChainService } from "../services/integratedSupplyChainService";
+import {
+  Package,
+  Layers,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
+  Hash,
+  ExternalLink,
+  RefreshCw,
+} from "lucide-react";
 
 interface NFTProductCreationProps {
   isDark: boolean;
-  onProductCreated?: (tokenId: number, txHash: string) => void;
+  onProductCreated?: (tokenId: string, txHash: string) => void;
 }
 
 const NFTProductCreation: React.FC<NFTProductCreationProps> = ({
@@ -11,43 +30,123 @@ const NFTProductCreation: React.FC<NFTProductCreationProps> = ({
   onProductCreated,
 }) => {
   const { account, isActive } = useWeb3();
-  const [formData, setFormData] = useState({
-    name: "",
-    sku: "",
-    description: "",
-    category: "dairy",
-    origin: "",
-    certifications: [] as string[],
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [minting, setMinting] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [mintedTokens, setMintedTokens] = useState<any[]>([]);
   const [success, setSuccess] = useState<{
-    tokenId: number;
+    tokenId: string;
     txHash: string;
+    productName: string;
   } | null>(null);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Load unminted products
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .is('token_id', null)
+        .eq('owner_wallet', account)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isActive || !account) {
-      alert("Please connect your wallet first");
+  // Load minted tokens
+  const loadMintedTokens = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .not('token_id', 'is', null)
+        .eq('owner_wallet', account)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      setMintedTokens(data || []);
+    } catch (error) {
+      console.error('Error loading minted tokens:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (account) {
+      loadProducts();
+      loadMintedTokens();
+    }
+  }, [account]);
+
+  const handleMintNFT = async () => {
+    if (!isActive || !account || !selectedProduct) {
+      alert("Please connect your wallet and select a product");
+      return;
+    }
+
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product) {
+      alert("Product not found");
       return;
     }
 
     try {
-      setIsSubmitting(true);
+      setMinting(selectedProduct);
 
-      // For demo purposes, we'll simulate the minting process
-      // In a real implementation, this would call the blockchain
-      const result = {
-        tokenId: Math.floor(Math.random() * 10000),
+      // Mint NFT using integrated service
+      const result = await integratedSupplyChainService.mintProductNFT({
+        rfidHash: product.rfid_tag,
+        productName: product.product_name,
+        batchNumber: product.batch_no,
+        manufacturingDate: product.mfg_date,
+        expiryDate: product.exp_date,
+        manufacturer: account
+      });
+
+      // Update product with token ID
+      const { error } = await supabase
+        .from('products')
+        .update({ 
+          token_id: result.toString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedProduct);
+
+      if (error) throw error;
+
+      // Set success state
+      setSuccess({
+        tokenId: result.toString(),
+        txHash: `0x${Math.random().toString(16).substr(2, 64)}`, // Mock tx hash
+        productName: product.product_name
+      });
+
+      // Refresh data
+      await loadProducts();
+      await loadMintedTokens();
+
+      // Clear selection
+      setSelectedProduct("");
+
+      // Call callback if provided
+      if (onProductCreated) {
+        onProductCreated(result.toString(), `0x${Math.random().toString(16).substr(2, 64)}`);
+      }
+
+    } catch (error) {
+      console.error('Error minting NFT:', error);
+      alert('Failed to mint NFT. Please try again.');
+    } finally {
+      setMinting(null);
+    }
+  };
         txHash: "0x" + Math.random().toString(16).substr(2, 64),
       };
 

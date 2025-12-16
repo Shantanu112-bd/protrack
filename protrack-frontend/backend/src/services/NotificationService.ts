@@ -12,7 +12,7 @@ export interface NotificationData {
 
 export interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   type: 'alert' | 'info' | 'warning' | 'success';
   title: string;
   message: string;
@@ -42,7 +42,11 @@ export class NotificationService {
   async createNotification(notificationData: NotificationData): Promise<string | null> {
     try {
       const notificationId = await this.supabaseService.createNotification({
-        ...notificationData,
+        user_id: notificationData.userId,
+        type: notificationData.type,
+        title: notificationData.title,
+        message: notificationData.message,
+        metadata: notificationData.metadata,
         read: false,
         created_at: new Date().toISOString()
       });
@@ -51,7 +55,11 @@ export class NotificationService {
         // Send real-time notification to user
         this.sendRealtimeNotification(notificationData.userId, {
           id: notificationId,
-          ...notificationData,
+          user_id: notificationData.userId,
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message,
+          metadata: notificationData.metadata,
           read: false,
           created_at: new Date().toISOString()
         });

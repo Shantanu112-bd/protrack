@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useWeb3 } from "../contexts/web3ContextTypes";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -15,7 +15,9 @@ import {
   Camera,
   Wifi,
   Shield,
+  X,
 } from "lucide-react";
+import { cameraService } from "../services/CameraService";
 
 // Define types
 interface ScannedProduct {
@@ -29,6 +31,13 @@ interface ScannedProduct {
   lastScan: string;
   location: string;
   verificationResult: string;
+  // New fields for enhanced features
+  qrCode: string;
+  rfidPayload: string;
+  productHash: string;
+  isVerified: boolean;
+  verificationTimestamp: string;
+  quickActions: QuickAction[];
 }
 
 interface ScanEvent {
@@ -39,6 +48,28 @@ interface ScanEvent {
   location: string;
   action: string;
   result: string;
+  // New fields for enhanced features
+  offline: boolean;
+  synced: boolean;
+  securityChallenge?: string;
+  securityResponse?: string;
+}
+
+interface QuickAction {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+interface OfflineScan {
+  id: string;
+  timestamp: string;
+  productId: string;
+  scannerId: string;
+  location: string;
+  action: string;
+  result: string;
+  synced: boolean;
 }
 
 const ScanRFID = () => {
@@ -57,6 +88,18 @@ const ScanRFID = () => {
       lastScan: "2023-12-01 14:30:00",
       location: "Warehouse A, New York",
       verificationResult: "authentic",
+      // New fields
+      qrCode: "QR-PROD-101",
+      rfidPayload: "RFID-PAYLOAD-101",
+      productHash: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
+      isVerified: true,
+      verificationTimestamp: "2023-12-01 14:30:00",
+      quickActions: [
+        { id: "receive", name: "Mark Received", icon: "📥" },
+        { id: "qa", name: "Start QA", icon: "🔬" },
+        { id: "note", name: "Add Note", icon: "📝" },
+        { id: "dispute", name: "Open Dispute", icon: "⚠️" },
+      ],
     },
     {
       id: 2,
@@ -69,6 +112,18 @@ const ScanRFID = () => {
       lastScan: "2023-12-02 09:15:00",
       location: "Store B, Los Angeles",
       verificationResult: "authentic",
+      // New fields
+      qrCode: "QR-PROD-102",
+      rfidPayload: "RFID-PAYLOAD-102",
+      productHash: "0x35Cc6634C0532925a3b8D4C0532925a3b8D4742d",
+      isVerified: true,
+      verificationTimestamp: "2023-12-02 09:15:00",
+      quickActions: [
+        { id: "receive", name: "Mark Received", icon: "📥" },
+        { id: "qa", name: "Start QA", icon: "🔬" },
+        { id: "note", name: "Add Note", icon: "📝" },
+        { id: "dispute", name: "Open Dispute", icon: "⚠️" },
+      ],
     },
   ]);
   const [scanHistory, setScanHistory] = useState<ScanEvent[]>([
@@ -80,6 +135,9 @@ const ScanRFID = () => {
       location: "Warehouse A, New York",
       action: "receive",
       result: "success",
+      // New fields
+      offline: false,
+      synced: true,
     },
     {
       id: 2,
@@ -89,8 +147,29 @@ const ScanRFID = () => {
       location: "Store B, Los Angeles",
       action: "quality_check",
       result: "success",
+      // New fields
+      offline: false,
+      synced: true,
     },
   ]);
+  const [offlineScans, setOfflineScans] = useState<OfflineScan[]>([
+    {
+      id: "offline-001",
+      timestamp: "2023-12-01 10:30:00",
+      productId: "PROD-103",
+      scannerId: "SCANNER-001",
+      location: "Warehouse A, New York",
+      action: "receive",
+      result: "success",
+      synced: false,
+    },
+  ]);
+  const [securityMode, setSecurityMode] = useState("standard"); // standard or enhanced
+
+  // Camera state
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Handle manual scan
   const handleManualScan = () => {
@@ -112,39 +191,118 @@ const ScanRFID = () => {
       location: "Current Location",
       action: "manual_scan",
       result: "success",
+      // New fields
+      offline: false,
+      synced: true,
     };
 
     setScanHistory([newScan, ...scanHistory]);
     setManualInput("");
   };
 
-  // Simulate camera scan
-  const simulateCameraScan = () => {
-    // In a real app, this would access the device camera
-    const simulatedCodes = [
-      "RFID-HASH-001-ABC",
-      "BARCODE-12345",
-      "QR-CODE-XYZ-789",
-    ];
-    const randomCode =
-      simulatedCodes[Math.floor(Math.random() * simulatedCodes.length)];
+  // Handle quick action
+  const handleQuickAction = (actionId: string, productId: string) => {
+    console.log(`Executing action ${actionId} for product ${productId}`);
+    // In a real implementation, this would execute the specific action
+    alert(`Executing action: ${actionId} for product: ${productId}`);
+  };
 
-    console.log("Simulating camera scan:", randomCode);
-    alert(`Scanned: ${randomCode}`);
+  // Sync offline scans
+  const syncOfflineScans = async () => {
+    console.log("Syncing offline scans...");
+    // In a real implementation, this would sync offline scans to the backend
+    const updatedScans = offlineScans.map((scan) => ({
+      ...scan,
+      synced: true,
+    }));
+    setOfflineScans(updatedScans);
+    alert(`Synced ${offlineScans.length} offline scans`);
+  };
+
+  // Toggle security mode
+  const toggleSecurityMode = () => {
+    setSecurityMode(securityMode === "standard" ? "enhanced" : "standard");
+  };
+
+  // Initialize camera
+  const initCamera = async () => {
+    if (!videoRef.current) return;
+
+    try {
+      await cameraService.initializeCamera(videoRef.current);
+      setIsCameraActive(true);
+    } catch (error) {
+      console.error("Camera initialization failed:", error);
+      alert(
+        error instanceof Error ? error.message : "Failed to initialize camera"
+      );
+    }
+  };
+
+  // Stop camera
+  const stopCamera = () => {
+    cameraService.stopCamera();
+    setIsCameraActive(false);
+    setIsScanning(false);
+  };
+
+  // Handle camera scan
+  const handleCameraScan = async () => {
+    if (!isCameraActive || isScanning) return;
+
+    setIsScanning(true);
+
+    try {
+      const result = await cameraService.scanForCode((decodedText) => {
+        processScanResult(decodedText);
+      });
+
+      // If scan completed without callback (fallback)
+      if (result) {
+        processScanResult(result);
+      }
+    } catch (error) {
+      console.error("Scan failed:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Scan failed. Please try again."
+      );
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // Process scan result
+  const processScanResult = (scanResult: string) => {
+    console.log("Scanned code:", scanResult);
+    alert(`Scanned: ${scanResult}`);
 
     // Add to scan history
     const newScan: ScanEvent = {
       id: scanHistory.length + 1,
       timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
-      productId: randomCode,
+      productId: scanResult,
       scannerId: "CAMERA-001",
       location: "Current Location",
       action: "camera_scan",
       result: "success",
+      // New fields
+      offline: false,
+      synced: true,
     };
 
     setScanHistory([newScan, ...scanHistory]);
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isCameraActive) {
+        cameraService.stopCamera();
+      }
+    };
+  }, [isCameraActive]);
 
   // Simulate RFID reader
   const simulateRFIDReader = () => {
@@ -169,6 +327,9 @@ const ScanRFID = () => {
       location: "Current Location",
       action: "rfid_read",
       result: "success",
+      // New fields
+      offline: false,
+      synced: true,
     };
 
     setScanHistory([newScan, ...scanHistory]);
@@ -290,6 +451,23 @@ const ScanRFID = () => {
             <option value="camera">Camera Scan</option>
             <option value="rfid">RFID Reader</option>
           </select>
+          <Button
+            onClick={toggleSecurityMode}
+            variant="outline"
+            className="flex items-center"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            {securityMode === "standard" ? "Enhanced Mode" : "Standard Mode"}
+          </Button>
+          <Button
+            onClick={syncOfflineScans}
+            variant="outline"
+            className="flex items-center"
+            disabled={offlineScans.filter((scan) => !scan.synced).length === 0}
+          >
+            <Wifi className="h-4 w-4 mr-2" />
+            Sync Offline ({offlineScans.filter((scan) => !scan.synced).length})
+          </Button>
         </div>
       </div>
 
@@ -360,25 +538,71 @@ const ScanRFID = () => {
                   Examples: PROD-123,
                   0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4, BARCODE-12345
                 </p>
+                <p className="mt-2">
+                  Security Mode:{" "}
+                  {securityMode === "standard" ? "Standard" : "Enhanced"}
+                </p>
               </div>
             </div>
           )}
 
           {scanMethod === "camera" && (
             <div className="text-center py-8">
-              <div className="mx-auto bg-gray-200 border-2 border-dashed rounded-xl w-64 h-64 flex items-center justify-center mb-4">
-                <Camera className="h-16 w-16 text-gray-400" />
+              <div className="mx-auto bg-gray-900 border-2 border-dashed rounded-xl w-full max-w-lg h-96 flex items-center justify-center mb-4 overflow-hidden relative">
+                {!isCameraActive ? (
+                  <div className="text-center text-gray-300">
+                    <Camera className="h-16 w-16 mx-auto mb-4" />
+                    <p className="mb-4">Camera is not active</p>
+                    <Button
+                      onClick={initCamera}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    >
+                      <Camera className="h-5 w-5 mr-2" />
+                      Start Camera
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full object-cover"
+                    />
+                    {isScanning && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-white">Scanning...</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               <p className="text-gray-600 mb-4">
                 Point your camera at a QR code or barcode to scan
               </p>
-              <Button
-                onClick={simulateCameraScan}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-              >
-                <Camera className="h-5 w-5 mr-2" />
-                Simulate Camera Scan
-              </Button>
+              <div className="flex justify-center gap-4">
+                {isCameraActive && (
+                  <>
+                    <Button
+                      onClick={handleCameraScan}
+                      disabled={isScanning}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    >
+                      <Camera className="h-5 w-5 mr-2" />
+                      {isScanning ? "Scanning..." : "Scan Code"}
+                    </Button>
+                    <Button
+                      onClick={stopCamera}
+                      variant="outline"
+                      className="flex items-center"
+                    >
+                      <X className="h-5 w-5 mr-2" />
+                      Stop Camera
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -419,7 +643,7 @@ const ScanRFID = () => {
                     Product
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    Batch
+                    Batch/Hash
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Status
@@ -432,6 +656,9 @@ const ScanRFID = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Verification
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -446,8 +673,13 @@ const ScanRFID = () => {
                         #{product.productId}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.batchId}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {product.batchId}
+                      </div>
+                      <div className="text-xs text-gray-400 font-mono truncate">
+                        {product.productHash.substring(0, 10)}...
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500">
@@ -462,6 +694,24 @@ const ScanRFID = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getVerificationBadge(product.verificationResult)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-wrap gap-1">
+                        {product.quickActions.map((action) => (
+                          <Button
+                            key={action.id}
+                            onClick={() =>
+                              handleQuickAction(action.id, product.productId)
+                            }
+                            variant="outline"
+                            size="sm"
+                            className="text-xs p-1 h-6"
+                          >
+                            <span className="mr-1">{action.icon}</span>
+                            {action.name}
+                          </Button>
+                        ))}
+                      </div>
                     </td>
                   </tr>
                 ))}

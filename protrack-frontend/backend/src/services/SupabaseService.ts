@@ -558,28 +558,6 @@ export class SupabaseService {
     }
   }
 
-  async updateProduct(productId: string, updates: Partial<DatabaseSchema['products']>): Promise<boolean> {
-    try {
-      const { error } = await this.serviceClient
-        .from('products')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', productId);
-
-      if (error) {
-        logger.error('Error updating product:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      logger.error('Error in updateProduct:', error);
-      return false;
-    }
-  }
-
   async getUserIoTDevices(userId: string): Promise<DatabaseSchema['iot_devices'][]> {
     try {
       const { data, error } = await this.serviceClient
@@ -1093,6 +1071,77 @@ export class SupabaseService {
         totalDataPoints: 0,
         devices: []
       };
+    }
+  }
+
+  // Authentication methods
+  async signInWithPassword(email: string, password: string): Promise<any> {
+    return this.client.auth.signInWithPassword({
+      email,
+      password
+    });
+  }
+
+  async updateAuthUser(data: any): Promise<any> {
+    return this.client.auth.updateUser(data);
+  }
+
+  async verifyOtp(data: any): Promise<any> {
+    return this.client.auth.verifyOtp(data);
+  }
+
+  // Wallet-based authentication
+  async getUserByWallet(walletAddress: string): Promise<DatabaseSchema['users'] | null> {
+    try {
+      const { data, error } = await this.serviceClient
+        .from('users')
+        .select('*')
+        .eq('wallet_address', walletAddress.toLowerCase())
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // User doesn't exist
+        }
+        logger.error('Error fetching user by wallet:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      logger.error('Error in getUserByWallet:', error);
+      return null;
+    }
+  }
+
+  async createUserWithWallet(userData: {
+    wallet_address: string;
+    role: string;
+  }): Promise<string | null> {
+    try {
+      const userId = crypto.randomUUID ? crypto.randomUUID() : require('uuid').v4();
+      
+      const { error } = await this.serviceClient
+        .from('users')
+        .insert({
+          id: userId,
+          email: `${userData.wallet_address.toLowerCase()}@wallet.local`,
+          wallet_address: userData.wallet_address.toLowerCase(),
+          role: userData.role,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        logger.error('Error creating user with wallet:', error);
+        return null;
+      }
+
+      logger.info(`Wallet user created: ${userData.wallet_address}`);
+      return userId;
+    } catch (error) {
+      logger.error('Error in createUserWithWallet:', error);
+      return null;
     }
   }
 }

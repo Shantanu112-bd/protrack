@@ -25,12 +25,12 @@ router.post('/devices', asyncHandler(async (req: Request, res: Response) => {
   const { device_id, device_type, product_id, metadata } = req.body;
 
   if (!device_id || !device_type) {
-    throw new BadRequestError('Device ID and device type are required');
+    throw BadRequestError('Device ID and device type are required');
   }
 
   const validDeviceTypes = ['temperature', 'humidity', 'gps', 'rfid', 'camera'];
   if (!validDeviceTypes.includes(device_type)) {
-    throw new BadRequestError('Invalid device type');
+    throw BadRequestError('Invalid device type');
   }
 
   try {
@@ -45,7 +45,7 @@ router.post('/devices', asyncHandler(async (req: Request, res: Response) => {
     });
 
     if (!deviceId) {
-      throw new BadRequestError('Failed to register IoT device');
+      throw BadRequestError('Failed to register IoT device');
     }
 
     logger.info(`IoT device registered: ${device_id} by user ${userId}`);
@@ -76,7 +76,7 @@ router.post('/data', asyncHandler(async (req: Request, res: Response) => {
   const { device_id, data_type, value, unit, location, product_id } = req.body;
 
   if (!device_id || !data_type || value === undefined) {
-    throw new BadRequestError('Device ID, data type, and value are required');
+    throw BadRequestError('Device ID, data type, and value are required');
   }
 
   try {
@@ -93,7 +93,7 @@ router.post('/data', asyncHandler(async (req: Request, res: Response) => {
     });
 
     if (!dataId) {
-      throw new BadRequestError('Failed to add IoT data');
+      throw BadRequestError('Failed to add IoT data');
     }
 
     // Submit to blockchain if available
@@ -183,19 +183,19 @@ router.patch('/devices/:device_id/status', asyncHandler(async (req: Request, res
   const { status } = req.body;
 
   if (!status) {
-    throw new BadRequestError('Status is required');
+    throw BadRequestError('Status is required');
   }
 
   const validStatuses = ['active', 'inactive', 'maintenance'];
   if (!validStatuses.includes(status)) {
-    throw new BadRequestError('Invalid status');
+    throw BadRequestError('Invalid status');
   }
 
   try {
     const success = await supabaseService.updateIoTDeviceStatus(device_id, status);
     
     if (!success) {
-      throw new BadRequestError('Failed to update device status');
+      throw BadRequestError('Failed to update device status');
     }
 
     logger.info(`IoT device status updated: ${device_id} -> ${status}`);

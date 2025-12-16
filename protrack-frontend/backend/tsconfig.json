@@ -34,18 +34,6 @@
       "@/utils/*": ["utils/*"]
     }
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "src/routes/**/*",
-    "src/services/**/*",
-    "src/middleware/**/*",
-    "src/config/**/*",
-    "src/utils/**/*"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

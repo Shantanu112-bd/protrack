@@ -10,19 +10,19 @@ const Header = () => {
     useContext(Web3Context);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
-  // Navigation items - using relative paths since we're inside the /dashboard/* route
+  // Navigation items - using /dashboard/* paths to match main.tsx routing
   const navItems = [
-    { name: "Dashboard", path: "" },
-    { name: "Products", path: "products" },
-    { name: "Shipments", path: "shipments" },
-    { name: "Mint", path: "mint" },
-    { name: "Scan", path: "scan" },
-    { name: "IoT", path: "iot" },
-    { name: "Analytics", path: "analytics" },
-    { name: "Optimization", path: "optimization" },
-    { name: "Quality", path: "quality" },
-    { name: "Compliance", path: "compliance" },
-    { name: "Sensors", path: "sensors" },
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Products", path: "/dashboard/products" },
+    { name: "Shipments", path: "/dashboard/shipments" },
+    { name: "Mint", path: "/dashboard/mint" },
+    { name: "Scan", path: "/dashboard/scan" },
+    { name: "IoT", path: "/dashboard/iot" },
+    { name: "Analytics", path: "/dashboard/analytics" },
+    { name: "Optimization", path: "/dashboard/optimization" },
+    { name: "Quality", path: "/dashboard/quality" },
+    { name: "Compliance", path: "/dashboard/compliance" },
+    { name: "Sensors", path: "/dashboard/sensors" },
   ];
 
   // Truncate wallet address for display
@@ -38,7 +38,7 @@ const Header = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link to="" className="flex items-center space-x-2">
+              <Link to="/dashboard" className="flex items-center space-x-2">
                 <div className="bg-white text-blue-600 p-1 rounded-lg">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -59,8 +59,9 @@ const Header = () => {
                   key={item.path}
                   to={item.path}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                    location.pathname === `/dashboard/${item.path}` ||
-                    (item.path === "" && location.pathname === "/dashboard")
+                    location.pathname === item.path ||
+                    (item.path === "/dashboard" &&
+                      location.pathname === "/dashboard")
                       ? "bg-white text-blue-600"
                       : "text-white hover:bg-blue-500 hover:bg-opacity-50"
                   }`}
@@ -116,8 +117,9 @@ const Header = () => {
                   key={item.path}
                   to={item.path}
                   className={`px-2 py-1 text-xs rounded transition-colors duration-200 ${
-                    location.pathname === `/dashboard/${item.path}` ||
-                    (item.path === "" && location.pathname === "/dashboard")
+                    location.pathname === item.path ||
+                    (item.path === "/dashboard" &&
+                      location.pathname === "/dashboard")
                       ? "bg-white text-blue-600"
                       : "text-white hover:bg-blue-500 hover:bg-opacity-50"
                   }`}

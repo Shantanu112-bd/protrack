@@ -23,7 +23,7 @@ router.post('/track', asyncHandler(async (req: Request, res: Response) => {
   const { eventType, productId, metadata } = req.body;
 
   if (!eventType) {
-    throw new BadRequestError('Event type is required');
+    throw BadRequestError('Event type is required');
   }
 
   try {
@@ -69,7 +69,7 @@ router.get('/product/:productId', asyncHandler(async (req: Request, res: Respons
     const analytics = await analyticsService.getProductAnalytics(productId);
     
     if (!analytics) {
-      throw new BadRequestError('Product analytics not found');
+      throw BadRequestError('Product analytics not found');
     }
 
     res.json({
@@ -90,7 +90,7 @@ router.get('/user/:userId', asyncHandler(async (req: Request, res: Response) => 
     const analytics = await analyticsService.getUserAnalytics(userId);
     
     if (!analytics) {
-      throw new BadRequestError('User analytics not found');
+      throw BadRequestError('User analytics not found');
     }
 
     res.json({

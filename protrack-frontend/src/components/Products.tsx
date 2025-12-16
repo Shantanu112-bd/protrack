@@ -13,6 +13,12 @@ import {
   TableRow,
 } from "./ui/table";
 import { Badge } from "./ui/badge";
+import { LoadingSpinner } from "./ui/loading-spinner";
+import { dashboardService } from "../services/dashboardService";
+import { supabase, trackingService } from "../services/supabase";
+import { integratedSupplyChainService } from "../services/integratedSupplyChainService";
+import { fallbackService } from "../services/fallbackService";
+import { ProductInsert } from "../types/database-override";
 import {
   Package,
   Search,
@@ -20,138 +26,174 @@ import {
   Eye,
   Download,
   RefreshCw,
-  Edit,
+  Plus,
+  MapPin,
+  User,
+  Hash,
+  Link,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Globe,
+  Leaf,
+  Loader2,
 } from "lucide-react";
-import { getProTrackContract, getProvider } from "../contracts/contractConfig";
 
-// Define types
+// Define types matching actual Supabase response
 interface Product {
-  id: number;
-  rfid: string;
-  barcode: string;
-  name: string;
-  batch: string;
+  id: string;
+  rfid_tag: string;
+  barcode?: string;
+  product_hash?: string;
+  product_name?: string;
+  batch_id?: string; // Supabase returns batch_id, not batch_no
+  batch_no?: string; // Keep for compatibility
+  mfg_date?: string;
+  exp_date?: string;
+  expiry_date?: string; // Supabase might return expiry_date
+  token_id?: string;
+  owner_wallet?: string;
+  manufacturer_id?: string;
+  current_custodian_id?: string;
   status: string;
-  owner: string;
+  current_location?: string;
+  max_temperature?: number;
+  min_temperature?: number;
+  max_humidity?: number;
+  min_humidity?: number;
+  max_shock?: number;
+  destination?: string;
+  expected_arrival?: string;
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  manufacturer?: { name: string; wallet_address: string };
+  current_custodian?: { name: string; wallet_address: string };
+  // Additional UI fields
+  category?: string;
+  weight?: number;
+  dimensions?: string;
+  price?: number;
+  currency?: string;
+  qualityScore?: number;
+  sustainabilityRating?: number;
+  isTokenized: boolean;
+}
+
+interface OwnershipEvent {
+  id: string;
+  eventType: string;
+  timestamp: string;
   location: string;
-  lastUpdate: string;
+  actor: string;
+  transactionHash?: string;
 }
 
 const Products = () => {
-  const { isActive } = useWeb3();
+  const { isActive, account } = useWeb3();
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [minting, setMinting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [userRole, setUserRole] = useState("admin"); // Add user role state
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [userRole, setUserRole] = useState("manufacturer");
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [newProduct, setNewProduct] = useState({
+    rfid_tag: "",
+    product_name: "",
+    batch_no: "",
+    mfg_date: "",
+    exp_date: "",
+    current_location: "",
+    category: "",
+    weight: 0,
+    dimensions: "",
+    price: 0,
+    currency: "USD",
+    max_temperature: 25,
+    min_temperature: 2,
+    max_humidity: 80,
+    min_humidity: 20,
+  });
 
-  // Mock data for demonstration
+  // Load products from database with fallback support
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+
+      // Use the enhanced tracking service with fallback
+      const data = await trackingService.getAllProducts();
+
+      const formattedProducts: Product[] =
+        data?.map((product) => ({
+          ...product,
+          isTokenized: !!product.token_id,
+          category: product.category || "General",
+          weight: product.weight || 1000, // Default 1kg
+          dimensions: product.dimensions || "Standard",
+          price: product.price || 100, // Default $100
+          currency: product.currency || "USD",
+          qualityScore: product.qualityScore || 80,
+          sustainabilityRating: product.sustainabilityRating || 70,
+        })) || [];
+
+      setProducts(formattedProducts);
+
+      // Update connection status based on success
+      const connectionStatus = fallbackService.getConnectionStatus();
+      if (!connectionStatus.supabaseConnected && formattedProducts.length > 0) {
+        console.log("📱 Running in offline mode with cached data");
+      }
+    } catch (error) {
+      console.error("Error loading products:", error);
+
+      // If all else fails, show mock data
+      const mockProducts = fallbackService.getMockProducts();
+      const formattedMockProducts: Product[] = mockProducts.map((product) => ({
+        ...product,
+        isTokenized: !!product.token_id,
+        category: product.category || "General",
+        weight: product.weight || 1000,
+        dimensions: product.dimensions || "Standard",
+        price: product.price || 100,
+        currency: product.currency || "USD",
+        qualityScore: product.qualityScore || 80,
+        sustainabilityRating: product.sustainabilityRating || 70,
+      }));
+
+      setProducts(formattedMockProducts);
+      console.log("📱 Using fallback mock data due to connection issues");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setProducts([
-      {
-        id: 1,
-        rfid: "RFID-001-ABC",
-        barcode: "BARCODE-12345",
-        name: "Organic Coffee Beans",
-        batch: "BATCH-2023-001",
-        status: "In Transit",
-        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        location: "Warehouse A, New York",
-        lastUpdate: "2023-12-01 14:30:00",
-      },
-      {
-        id: 2,
-        rfid: "RFID-002-DEF",
-        barcode: "BARCODE-67890",
-        name: "Premium Chocolate",
-        batch: "BATCH-2023-002",
-        status: "Received",
-        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        location: "Store B, Los Angeles",
-        lastUpdate: "2023-12-02 09:15:00",
-      },
-      {
-        id: 3,
-        rfid: "RFID-003-GHI",
-        barcode: "BARCODE-11111",
-        name: "Organic Honey",
-        batch: "BATCH-2023-003",
-        status: "Manufactured",
-        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        location: "Factory C, Chicago",
-        lastUpdate: "2023-12-03 11:45:00",
-      },
-      {
-        id: 4,
-        rfid: "RFID-004-JKL",
-        barcode: "BARCODE-22222",
-        name: "Artisanal Cheese",
-        batch: "BATCH-2023-004",
-        status: "Packaged",
-        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        location: "Packaging Facility D, Boston",
-        lastUpdate: "2023-12-04 16:20:00",
-      },
-      {
-        id: 5,
-        rfid: "RFID-005-MNO",
-        barcode: "BARCODE-33333",
-        name: "Cold-Pressed Olive Oil",
-        batch: "BATCH-2023-005",
-        status: "In Transit",
-        owner: "0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4",
-        location: "Distribution Center E, Miami",
-        lastUpdate: "2023-12-05 10:45:00",
-      },
-    ]);
+    loadProducts();
+
+    // Add online/offline event listeners
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   // Refresh products data
   const refreshProducts = async () => {
-    if (!isActive) {
-      console.log("Wallet not connected");
-      return;
-    }
-
-    try {
-      // Get provider and contract instance
-      const provider = getProvider();
-      const contract = getProTrackContract(provider);
-
-      // For now, we'll use a simple approach to fetch some products
-      // In a real implementation, you'd want to track all minted products
-      const productIds = [1, 2, 3, 4, 5]; // Sample product IDs
-      const fetchedProducts: Product[] = [];
-
-      for (const id of productIds) {
-        try {
-          // Get product data
-          const productData = await contract.getProduct(id);
-
-          // Convert contract data to UI format
-          const product: Product = {
-            id: Number(id),
-            rfid: productData.rfidHash,
-            barcode: productData.barcode,
-            name: productData.productName,
-            batch: productData.batchId,
-            status: getProductStatusString(productData.status),
-            owner: productData.currentCustodian,
-            location: productData.currentLocation,
-            lastUpdate: new Date(
-              Number(productData.lastUpdated) * 1000
-            ).toLocaleString(),
-          };
-
-          fetchedProducts.push(product);
-        } catch (error) {
-          console.error(`Error fetching product ${id}:`, error);
-        }
-      }
-
-      setProducts(fetchedProducts);
-    } catch (error) {
-      console.error("Error refreshing products:", error);
-    }
+    await loadProducts();
   };
 
   // Convert product status enum to string
@@ -183,15 +225,21 @@ const Products = () => {
   // Filter products based on search term and status
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.rfid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode.toLowerCase().includes(searchTerm.toLowerCase());
+      product.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.rfid_tag?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.batch_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.id?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" ||
-      product.status.toLowerCase() === statusFilter.toLowerCase();
+      product.status?.toLowerCase() === statusFilter.toLowerCase();
 
-    return matchesSearch && matchesStatus;
+    const matchesCategory =
+      categoryFilter === "all" ||
+      product.category?.toLowerCase() === categoryFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
   // Format status badge
@@ -244,8 +292,267 @@ const Products = () => {
 
   // View product details
   const viewProductDetails = (product: Product) => {
-    // In a real implementation, this would open a modal with product details
-    console.log("Viewing product details:", product);
+    setSelectedProduct(product);
+    setShowProductModal(true);
+  };
+
+  // Mint product as NFT/SBT
+  const mintProduct = async (product: Product) => {
+    if (!isActive || !account) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    try {
+      setMinting(product.id);
+
+      // Create product with blockchain integration
+      const result = await dashboardService.createProduct({
+        rfid_tag: product.rfid_tag,
+        product_name: product.product_name,
+        batch_no: product.batch_no,
+        mfg_date: product.mfg_date,
+        exp_date: product.exp_date,
+        manufacturer_wallet: account,
+      });
+
+      // Update local state
+      setProducts(
+        products.map((p) =>
+          p.id === product.id
+            ? { ...p, isTokenized: true, token_id: result.token_id }
+            : p
+        )
+      );
+
+      alert("Product minted successfully!");
+    } catch (error) {
+      console.error("Error minting product:", error);
+      alert("Failed to mint product. Please try again.");
+    } finally {
+      setMinting(null);
+    }
+  };
+
+  // View provenance timeline
+  const viewProvenance = (product: Product) => {
+    // In a real implementation, this would show the full ownership history
+    console.log("Viewing provenance for:", product);
+  };
+
+  // Create new product
+  const createProduct = () => {
+    setShowCreateModal(true);
+  };
+
+  // Handle create product form submission
+  const handleCreateProduct = async () => {
+    if (!account) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    // Validate required fields
+    if (!newProduct.rfid_tag.trim()) {
+      alert("RFID Tag is required");
+      return;
+    }
+    if (!newProduct.product_name.trim()) {
+      alert("Product Name is required");
+      return;
+    }
+    if (!newProduct.batch_no.trim()) {
+      alert("Batch Number is required");
+      return;
+    }
+    if (!newProduct.mfg_date) {
+      alert("Manufacturing Date is required");
+      return;
+    }
+    if (!newProduct.exp_date) {
+      alert("Expiry Date is required");
+      return;
+    }
+    if (!newProduct.current_location.trim()) {
+      alert("Current Location is required");
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      // Check connection status and inform user
+      const connectionStatus = fallbackService.getConnectionStatus();
+      if (!connectionStatus.isOnline) {
+        console.log("📱 Creating product in offline mode");
+      } else if (!connectionStatus.supabaseConnected) {
+        console.log("📱 Creating product with fallback service");
+      } else {
+        console.log("✅ Creating product with full connectivity");
+      }
+
+      console.log("Creating product with data:", {
+        rfid_tag: newProduct.rfid_tag,
+        product_name: newProduct.product_name,
+        batch_no: newProduct.batch_no,
+        mfg_date: newProduct.mfg_date,
+        exp_date: newProduct.exp_date,
+        owner_wallet: account,
+        current_location: newProduct.current_location,
+      });
+
+      // Create product using enhanced service with fallback
+      const productData = {
+        rfid_tag: newProduct.rfid_tag,
+        product_name: newProduct.product_name,
+        batch_no: newProduct.batch_no,
+        mfg_date: newProduct.mfg_date,
+        exp_date: newProduct.exp_date,
+        owner_wallet: account,
+        status: "manufactured",
+        current_location: newProduct.current_location,
+        // Include optional fields
+        max_temperature: newProduct.max_temperature
+          ? parseFloat(newProduct.max_temperature.toString())
+          : undefined,
+        min_temperature: newProduct.min_temperature
+          ? parseFloat(newProduct.min_temperature.toString())
+          : undefined,
+        max_humidity: newProduct.max_humidity
+          ? parseFloat(newProduct.max_humidity.toString())
+          : undefined,
+        min_humidity: newProduct.min_humidity
+          ? parseFloat(newProduct.min_humidity.toString())
+          : undefined,
+      };
+
+      console.log("Creating product with enhanced service:", productData);
+
+      // Use the enhanced tracking service with automatic fallback
+      const data = await trackingService.createProduct(productData);
+
+      console.log("Product created successfully:", data);
+
+      // Check if we're in offline mode and inform user
+      const finalConnectionStatus = fallbackService.getConnectionStatus();
+      if (!finalConnectionStatus.supabaseConnected) {
+        console.log(
+          "📱 Product created in offline mode - will sync when connection restored"
+        );
+      }
+
+      // Try to update with temperature/humidity fields if they were provided
+      if (
+        newProduct.max_temperature ||
+        newProduct.min_temperature ||
+        newProduct.max_humidity ||
+        newProduct.min_humidity
+      ) {
+        try {
+          const tempUpdateData: any = {};
+          if (newProduct.max_temperature) {
+            tempUpdateData.max_temperature = parseFloat(
+              newProduct.max_temperature.toString()
+            );
+          }
+          if (newProduct.min_temperature) {
+            tempUpdateData.min_temperature = parseFloat(
+              newProduct.min_temperature.toString()
+            );
+          }
+          if (newProduct.max_humidity) {
+            tempUpdateData.max_humidity = parseFloat(
+              newProduct.max_humidity.toString()
+            );
+          }
+          if (newProduct.min_humidity) {
+            tempUpdateData.min_humidity = parseFloat(
+              newProduct.min_humidity.toString()
+            );
+          }
+
+          await supabase
+            .from("products")
+            .update(tempUpdateData)
+            .eq("id", data.id);
+
+          console.log("Temperature/humidity data updated successfully");
+        } catch (tempError) {
+          console.warn(
+            "Could not update temperature/humidity data:",
+            tempError
+          );
+          // Don't fail the entire operation for this
+        }
+      }
+
+      // Refresh products list
+      await loadProducts();
+
+      // Reset form and close modal
+      setShowCreateModal(false);
+      setNewProduct({
+        rfid_tag: "",
+        product_name: "",
+        batch_no: "",
+        mfg_date: "",
+        exp_date: "",
+        current_location: "",
+        category: "",
+        weight: 0,
+        dimensions: "",
+        price: 0,
+        currency: "USD",
+        max_temperature: 25,
+        min_temperature: 2,
+        max_humidity: 80,
+        min_humidity: 20,
+      });
+
+      alert("Product created successfully!");
+    } catch (error) {
+      console.error("Error creating product:", error);
+
+      // More detailed error message with user-friendly suggestions
+      let errorMessage = "Failed to create product. ";
+      if (error instanceof Error) {
+        errorMessage += error.message;
+
+        // Add helpful suggestions based on error type
+        if (error.message.includes("Network connection failed")) {
+          errorMessage += "\n\nTroubleshooting tips:\n";
+          errorMessage += "• Check your internet connection\n";
+          errorMessage += "• Try refreshing the page\n";
+          errorMessage += "• Disable VPN if using one\n";
+          errorMessage += "• Try again in a few moments";
+        } else if (error.message.includes("RFID tag already exists")) {
+          errorMessage +=
+            "\n\nSolution: Click the 'Generate' button to create a unique RFID tag.";
+        } else if (error.message.includes("required fields")) {
+          errorMessage +=
+            "\n\nPlease ensure all required fields are filled out.";
+        }
+      } else {
+        errorMessage += "An unexpected error occurred. Please try again.";
+      }
+
+      alert(errorMessage);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Handle input change for new product form
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setNewProduct({
+      ...newProduct,
+      [name]: value,
+    });
   };
 
   // Check if user has permission to perform actions based on role
@@ -263,6 +570,58 @@ const Products = () => {
         return ["view"].includes(action);
       default:
         return false;
+    }
+  };
+
+  // Get quality score badge
+  const getQualityScoreBadge = (score: number) => {
+    if (score >= 90) {
+      return (
+        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Excellent ({score})
+        </Badge>
+      );
+    } else if (score >= 75) {
+      return (
+        <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">
+          <TrendingUp className="h-3 w-3 mr-1" />
+          Good ({score})
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-gradient-to-r from-red-500 to-rose-500">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Needs Attention ({score})
+        </Badge>
+      );
+    }
+  };
+
+  // Get sustainability badge
+  const getSustainabilityBadge = (rating: number) => {
+    if (rating >= 85) {
+      return (
+        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500">
+          <Leaf className="h-3 w-3 mr-1" />
+          Eco-Friendly ({rating})
+        </Badge>
+      );
+    } else if (rating >= 70) {
+      return (
+        <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500">
+          <Globe className="h-3 w-3 mr-1" />
+          Moderate ({rating})
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-gradient-to-r from-gray-500 to-gray-700">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Low ({rating})
+        </Badge>
+      );
     }
   };
 
@@ -290,6 +649,13 @@ const Products = () => {
             <option value="consumer">Consumer</option>
           </select>
           <Button
+            onClick={createProduct}
+            className="flex items-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            New Product
+          </Button>
+          <Button
             onClick={refreshProducts}
             className="flex items-center bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
@@ -306,7 +672,7 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Wallet connection warning */}
+      {/* Connection warnings */}
       {!isActive && (
         <div className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl p-4 text-center shadow-lg">
           <div className="flex items-center justify-center">
@@ -315,6 +681,51 @@ const Products = () => {
               Wallet not connected - Connect to interact with blockchain
               features
             </span>
+          </div>
+        </div>
+      )}
+
+      {!isOnline && (
+        <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-2xl p-4 text-center shadow-lg">
+          <div className="flex items-center justify-center">
+            <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+            <span className="text-red-800 font-medium">
+              No internet connection - Running in offline mode
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isOnline && !fallbackService.getConnectionStatus().supabaseConnected && (
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Package className="h-5 w-5 text-blue-600 mr-2" />
+              <span className="text-blue-800 font-medium">
+                Using offline mode - Data will sync when connection restored
+                {fallbackService.getPendingOperationsCount() > 0 &&
+                  ` (${fallbackService.getPendingOperationsCount()} operations pending)`}
+              </span>
+            </div>
+            <Button
+              onClick={async () => {
+                try {
+                  console.log("🔄 Forcing system online...");
+                  await fallbackService.forceOnlineMode();
+                  // Refresh the page to update all components
+                  window.location.reload();
+                } catch (error) {
+                  console.error("Failed to force online mode:", error);
+                  alert(
+                    "Failed to go online. Please check your connection and try again."
+                  );
+                }
+              }}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Go Online
+            </Button>
           </div>
         </div>
       )}
@@ -328,7 +739,7 @@ const Products = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="search" className="text-gray-700">
                 Search Products
@@ -337,7 +748,7 @@ const Products = () => {
                 <Input
                   id="search"
                   type="text"
-                  placeholder="Search by name, RFID, or barcode..."
+                  placeholder="Search by name, RFID, barcode..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -361,7 +772,27 @@ const Products = () => {
                 <option value="in transit">In Transit</option>
                 <option value="received">Received</option>
                 <option value="sold">Sold</option>
+                <option value="warehoused">Warehoused</option>
+                <option value="delivered">Delivered</option>
+                <option value="returned">Returned</option>
                 <option value="recalled">Recalled</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="category" className="text-gray-700">
+                Filter by Category
+              </Label>
+              <select
+                id="category"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="beverages">Beverages</option>
+                <option value="confectionery">Confectionery</option>
+                <option value="sweeteners">Sweeteners</option>
+                <option value="general">General</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -369,6 +800,7 @@ const Products = () => {
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
+                  setCategoryFilter("all");
                 }}
                 className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white"
               >
@@ -397,16 +829,31 @@ const Products = () => {
                     Product
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
-                    Batch
+                    Category
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Batch/SKU
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Lifecycle
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
                     Status
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
-                    Owner
+                    Quality
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
-                    Location
+                    Sustainability
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Token
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Price
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-bold">
+                    Owner
                   </TableHead>
                   <TableHead className="text-gray-700 font-bold">
                     Last Update
@@ -421,29 +868,75 @@ const Products = () => {
                   filteredProducts.map((product) => (
                     <TableRow key={product.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">
-                        {product.id}
+                        {product.id.substring(0, 8)}...
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">
-                            RFID: {product.rfid}
+                          <div className="font-medium">
+                            {product.product_name}
                           </div>
                           <div className="text-sm text-gray-500">
-                            Barcode: {product.barcode}
+                            RFID: {product.rfid_tag}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{product.batch}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500">
+                          {product.category || "General"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="text-sm">
+                            {product.batch_id || product.batch_no}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {product.mfg_date}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
+                          {product.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{getStatusBadge(product.status)}</TableCell>
                       <TableCell>
-                        <div className="font-mono text-sm">
-                          {product.owner.substring(0, 6)}...
-                          {product.owner.substring(product.owner.length - 4)}
+                        {getQualityScoreBadge(product.qualityScore || 80)}
+                      </TableCell>
+                      <TableCell>
+                        {getSustainabilityBadge(
+                          product.sustainabilityRating || 70
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.isTokenized ? (
+                          <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500">
+                            <Hash className="h-3 w-3 mr-1" />#{product.token_id}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-gradient-to-r from-gray-500 to-gray-700">
+                            Not Minted
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {product.currency || "USD"}{" "}
+                          {(product.price || 0).toFixed(2)}
                         </div>
                       </TableCell>
-                      <TableCell>{product.location}</TableCell>
-                      <TableCell>{product.lastUpdate}</TableCell>
+                      <TableCell>
+                        <div className="font-mono text-sm">
+                          {product.owner_wallet?.substring(0, 6)}...
+                          {product.owner_wallet?.substring(
+                            product.owner_wallet.length - 4
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(product.updated_at).toLocaleDateString()}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-2">
                           <Button
@@ -455,14 +948,29 @@ const Products = () => {
                             <Eye className="h-4 w-4 mr-1" />
                             View
                           </Button>
-                          {canPerformAction("update") && (
+                          <Button
+                            onClick={() => viewProvenance(product)}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center"
+                          >
+                            <Package className="h-4 w-4 mr-1" />
+                            Provenance
+                          </Button>
+                          {!product.isTokenized && (
                             <Button
+                              onClick={() => mintProduct(product)}
                               variant="outline"
                               size="sm"
                               className="flex items-center"
+                              disabled={minting === product.id}
                             >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
+                              {minting === product.id ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <Package className="h-4 w-4 mr-1" />
+                              )}
+                              {minting === product.id ? "Minting..." : "Mint"}
                             </Button>
                           )}
                         </div>
@@ -472,7 +980,7 @@ const Products = () => {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={13}
                       className="text-center py-8 text-gray-500"
                     >
                       No products found matching your criteria
@@ -484,6 +992,590 @@ const Products = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Product Detail Modal */}
+      {showProductModal && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <CardTitle className="flex items-center text-gray-800">
+                  <Package className="h-6 w-6 mr-2 text-blue-500" />
+                  Product Details: {selectedProduct.product_name}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowProductModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                    Basic Information
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Product ID:</span>
+                      <span className="font-medium">{selectedProduct.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">SKU:</span>
+                      <span className="font-medium">
+                        {selectedProduct.batch_id || selectedProduct.batch_no}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Category:</span>
+                      <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500">
+                        {selectedProduct.category}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Batch ID:</span>
+                      <span className="font-medium">
+                        {selectedProduct.batch_id || selectedProduct.batch_no}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Manufacturer:</span>
+                      <span className="font-medium">
+                        {selectedProduct.manufacturer_id}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Supplier:</span>
+                      <span className="font-medium">
+                        {selectedProduct.metadata?.supplier || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Origin Country:</span>
+                      <span className="font-medium">
+                        {selectedProduct.metadata?.originCountry || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-semibold mt-6 mb-4 text-gray-800">
+                    Lifecycle Information
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      {getStatusBadge(selectedProduct.status)}
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Lifecycle State:</span>
+                      <Badge className="bg-gradient-to-r from-purple-500 to-pink-500">
+                        {selectedProduct.status}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Manufacture Date:</span>
+                      <span className="font-medium">
+                        {selectedProduct.mfg_date}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Expiry Date:</span>
+                      <span className="font-medium">
+                        {selectedProduct.exp_date}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                    Technical Specifications
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Weight:</span>
+                      <span className="font-medium">
+                        {selectedProduct.weight} kg
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Dimensions:</span>
+                      <span className="font-medium">
+                        {selectedProduct.dimensions}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Temperature Requirement:
+                      </span>
+                      <span className="font-medium">
+                        {selectedProduct.metadata?.temperatureRequirement ||
+                          "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Storage Condition:</span>
+                      <span className="font-medium">
+                        {selectedProduct.metadata?.storageCondition || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Price:</span>
+                      <span className="font-medium">
+                        {selectedProduct.currency}{" "}
+                        {selectedProduct.price.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-semibold mt-6 mb-4 text-gray-800">
+                    Quality Metrics
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Quality Score:</span>
+                      {getQualityScoreBadge(selectedProduct.qualityScore)}
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Sustainability Rating:
+                      </span>
+                      {getSustainabilityBadge(
+                        selectedProduct.sustainabilityRating
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-semibold mt-6 mb-4 text-gray-800">
+                    Blockchain Information
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tokenized:</span>
+                      {selectedProduct.isTokenized ? (
+                        <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500">
+                          Yes (#{selectedProduct.token_id})
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-gradient-to-r from-gray-500 to-gray-700">
+                          No
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">RFID:</span>
+                      <span className="font-mono text-sm">
+                        {selectedProduct.rfid_tag}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Barcode:</span>
+                      <span className="font-mono text-sm">
+                        {selectedProduct.barcode || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Product Hash:</span>
+                      <span className="font-mono text-sm truncate">
+                        {selectedProduct.product_hash || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">QR Code:</span>
+                      <span className="font-mono text-sm">
+                        {selectedProduct.metadata?.qrCode || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                  Ownership History
+                </h3>
+                <div className="border border-gray-200 rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-gray-50">
+                      <TableRow>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Date/Time</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Actor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(selectedProduct.metadata?.ownershipHistory || []).map(
+                        (event: OwnershipEvent) => (
+                          <TableRow key={event.id}>
+                            <TableCell className="font-medium">
+                              {event.eventType}
+                            </TableCell>
+                            <TableCell>{event.timestamp}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+                                {event.location}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center">
+                                <User className="h-4 w-4 text-gray-500 mr-1" />
+                                {event.actor}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => viewProvenance(selectedProduct)}
+                >
+                  <Link className="h-4 w-4 mr-2" />
+                  View Full Provenance
+                </Button>
+                <Button onClick={() => setShowProductModal(false)}>
+                  Close
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Create Product Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <CardTitle className="flex items-center text-gray-800">
+                  <Plus className="h-6 w-6 mr-2 text-blue-500" />
+                  Create New Product
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XCircle className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="product_name" className="text-gray-700">
+                      Product Name
+                    </Label>
+                    <Input
+                      id="product_name"
+                      name="product_name"
+                      value={newProduct.product_name}
+                      onChange={handleInputChange}
+                      placeholder="Enter product name"
+                      className="mt-1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="category" className="text-gray-700">
+                      Category
+                    </Label>
+                    <select
+                      id="category"
+                      name="category"
+                      value={newProduct.category}
+                      onChange={handleInputChange}
+                      className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select category</option>
+                      <option value="beverages">Beverages</option>
+                      <option value="confectionery">Confectionery</option>
+                      <option value="sweeteners">Sweeteners</option>
+                      <option value="pharmaceuticals">Pharmaceuticals</option>
+                      <option value="electronics">Electronics</option>
+                      <option value="general">General</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rfid_tag" className="text-gray-700">
+                      RFID Tag
+                    </Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="rfid_tag"
+                        name="rfid_tag"
+                        value={newProduct.rfid_tag}
+                        onChange={handleInputChange}
+                        placeholder="Enter RFID tag"
+                        className="flex-1"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const timestamp = Date.now();
+                          const randomId = Math.random()
+                            .toString(36)
+                            .substring(2, 8);
+                          const generatedRFID = `RFID_${timestamp}_${randomId}`;
+                          setNewProduct({
+                            ...newProduct,
+                            rfid_tag: generatedRFID,
+                          });
+                        }}
+                        className="px-3"
+                      >
+                        Generate
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="batch_no" className="text-gray-700">
+                      Batch Number
+                    </Label>
+                    <Input
+                      id="batch_no"
+                      name="batch_no"
+                      value={newProduct.batch_no}
+                      onChange={handleInputChange}
+                      placeholder="Enter batch number"
+                      className="mt-1"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="mfg_date" className="text-gray-700">
+                      Manufacturing Date
+                    </Label>
+                    <Input
+                      id="mfg_date"
+                      name="mfg_date"
+                      type="date"
+                      value={newProduct.mfg_date}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="exp_date" className="text-gray-700">
+                      Expiry Date
+                    </Label>
+                    <Input
+                      id="exp_date"
+                      name="exp_date"
+                      type="date"
+                      value={newProduct.exp_date}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="current_location" className="text-gray-700">
+                    Current Location
+                  </Label>
+                  <Input
+                    id="current_location"
+                    name="current_location"
+                    value={newProduct.current_location}
+                    onChange={handleInputChange}
+                    placeholder="Enter current location"
+                    className="mt-1"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price" className="text-gray-700">
+                      Price
+                    </Label>
+                    <Input
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={newProduct.price}
+                      onChange={handleInputChange}
+                      placeholder="Enter price"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="currency" className="text-gray-700">
+                      Currency
+                    </Label>
+                    <select
+                      id="currency"
+                      name="currency"
+                      value={newProduct.currency}
+                      onChange={handleInputChange}
+                      className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="weight" className="text-gray-700">
+                      Weight (kg)
+                    </Label>
+                    <Input
+                      id="weight"
+                      name="weight"
+                      type="number"
+                      value={newProduct.weight}
+                      onChange={handleInputChange}
+                      placeholder="Enter weight"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dimensions" className="text-gray-700">
+                      Dimensions
+                    </Label>
+                    <Input
+                      id="dimensions"
+                      name="dimensions"
+                      value={newProduct.dimensions}
+                      onChange={handleInputChange}
+                      placeholder="e.g., 10x10x10 cm"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="max_temperature" className="text-gray-700">
+                      Max Temperature (°C)
+                    </Label>
+                    <Input
+                      id="max_temperature"
+                      name="max_temperature"
+                      type="number"
+                      value={newProduct.max_temperature}
+                      onChange={handleInputChange}
+                      placeholder="25"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="min_temperature" className="text-gray-700">
+                      Min Temperature (°C)
+                    </Label>
+                    <Input
+                      id="min_temperature"
+                      name="min_temperature"
+                      type="number"
+                      value={newProduct.min_temperature}
+                      onChange={handleInputChange}
+                      placeholder="2"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="max_humidity" className="text-gray-700">
+                      Max Humidity (%)
+                    </Label>
+                    <Input
+                      id="max_humidity"
+                      name="max_humidity"
+                      type="number"
+                      value={newProduct.max_humidity}
+                      onChange={handleInputChange}
+                      placeholder="80"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="min_humidity" className="text-gray-700">
+                      Min Humidity (%)
+                    </Label>
+                    <Input
+                      id="min_humidity"
+                      name="min_humidity"
+                      type="number"
+                      value={newProduct.min_humidity}
+                      onChange={handleInputChange}
+                      placeholder="20"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={creating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                  onClick={handleCreateProduct}
+                  disabled={
+                    creating ||
+                    !isOnline ||
+                    !account ||
+                    !newProduct.product_name ||
+                    !newProduct.rfid_tag ||
+                    !newProduct.batch_no
+                  }
+                  title={
+                    !isOnline
+                      ? "No internet connection"
+                      : !account
+                      ? "Please connect your wallet"
+                      : ""
+                  }
+                >
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : !isOnline ? (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Offline
+                    </>
+                  ) : !account ? (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Connect Wallet
+                    </>
+                  ) : (
+                    "Create Product"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
